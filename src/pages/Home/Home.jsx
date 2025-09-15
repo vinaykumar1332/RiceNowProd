@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import Cards from "./cards/cards";
 import "./Home.css";
 
-import { VITE_PRODUCTS_API } from "../../API.js"; // adjust path if api.js is not in src/
+import { VITE_PRODUCTS_API } from "../../API"; // adjust path if api.js is not in src/
 
 export default function Home() {
   const [products, setProducts] = useState([]);

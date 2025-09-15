@@ -1,7 +1,7 @@
 // MyOrders.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./MyOrders.css";
-import { VITE_ORDERS_API } from "../../API";
+import { VITE_ORDERS_API } from "../../API";;
 
 /* Canonical status styles */
 const STATUS_STYLES = {
