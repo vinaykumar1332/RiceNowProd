@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
-import Cards from "./cards/cards";
+import Cards from "./cards/cards"; // adjust path if your project structure differs
 import "./Home.css";
 
-import { VITE_PRODUCTS_API } from "../../API"; // adjust path if api.js is not in src/
+const PRODUCTS_API = import.meta.env.VITE_PRODUCTS_API || ""; // will be injected by Vite
 
 export default function Home() {
   const [products, setProducts] = useState([]);
@@ -10,15 +10,15 @@ export default function Home() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (!VITE_PRODUCTS_API) {
-      setError("Products API not configured in api.js");
+    if (!PRODUCTS_API) {
+      setError("Products API not configured.");
       setLoading(false);
       return;
     }
 
-    fetch(VITE_PRODUCTS_API, {
+    fetch(PRODUCTS_API, {
       method: "GET",
-      mode: "cors",
+      mode: "cors", // server must allow CORS
       headers: {
         Accept: "application/json",
       },
@@ -32,15 +32,12 @@ export default function Home() {
         return res.json();
       })
       .then((data) => {
-        if (Array.isArray(data)) {
-          setProducts(data);
-        } else if (data?.products && Array.isArray(data.products)) {
-          setProducts(data.products);
-        } else if (data?.rows && Array.isArray(data.rows)) {
-          setProducts(data.rows);
-        } else if (data?.data && Array.isArray(data.data)) {
-          setProducts(data.data);
-        } else {
+        // normalize common wrappers
+        if (Array.isArray(data)) setProducts(data);
+        else if (Array.isArray(data?.products)) setProducts(data.products);
+        else if (Array.isArray(data?.rows)) setProducts(data.rows);
+        else if (Array.isArray(data?.data)) setProducts(data.data);
+        else {
           console.warn("Unexpected data shape from products API", data);
           setProducts([]);
         }
@@ -63,8 +60,8 @@ export default function Home() {
 
       <div style={{ marginTop: 20 }}>
         <div className="cards-parent">
-          {products.map((p) => (
-            <Cards key={p.id ?? `${p.title}-${Math.random()}`} product={p} />
+          {products.map((p, idx) => (
+            <Cards key={p.id ?? p.title ?? idx} product={p} />
           ))}
         </div>
       </div>

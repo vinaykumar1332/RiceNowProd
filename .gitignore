@@ -19,14 +19,3 @@ lerna-debug.log*
 .env.local
 .env.*.local
 
-# Editor settings
-.vscode
-.idea
-
-# OS-specific files
-.DS_Store
-Thumbs.db
-
-# Misc
-*.sw?
-*.bak
