@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import Cards from "./cards/cards"; // adjust path if your project structure differs
 import "./Home.css";
-
-const PRODUCTS_API = import.meta.env.VITE_PRODUCTS_API || ""; // will be injected by Vite
+import {VITE_PRODUCTS_API} from "../../API"
+const PRODUCTS_API = VITE_PRODUCTS_API; // will be injected by Vite
 
 export default function Home() {
   const [products, setProducts] = useState([]);

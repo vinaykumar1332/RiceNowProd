@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./MyOrders.css";
 
-const VITE_ORDERS_API = import.meta.env.VITE_ORDERS_API;
+import {VITE_ORDERS_API} from "../../API"
+const VITE_ORDERS_API_var = VITE_ORDERS_API;
 
 const STATUS_STYLES = {
   opened: { label: "Opened", color: "#06b6d4" },
@@ -76,14 +77,14 @@ export default function MyOrders() {
     localStorage.setItem("savedMobile", m);
     setLoading(true);
 
-    if (!VITE_ORDERS_API) {
+    if (!VITE_ORDERS_API_var) {
       setErrorMsg("Orders API not configured. Add VITE_ORDERS_API to your .env or to your deployment environment.");
       setLoading(false);
       return;
     }
 
     try {
-      const resp = await fetch(`${VITE_ORDERS_API}?mobile=${encodeURIComponent(m)}`);
+      const resp = await fetch(`${VITE_ORDERS_API_var}?mobile=${encodeURIComponent(m)}`);
       if (!resp.ok) {
         const text = await resp.text().catch(() => "");
         throw new Error(`Network error ${resp.status}: ${text}`);
