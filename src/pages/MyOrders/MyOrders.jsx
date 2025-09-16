@@ -1,20 +1,18 @@
-// MyOrders.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./MyOrders.css";
-import { VITE_ORDERS_API } from "../../API";;
 
-/* Canonical status styles */
+const VITE_ORDERS_API = import.meta.env.VITE_ORDERS_API;
+
 const STATUS_STYLES = {
-  opened: { label: "Opened", color: "#06b6d4" }, // teal
-  "in-progress": { label: "In Progress", color: "#f59e0b" }, // amber
-  "out-for-delivery": { label: "Out for Delivery", color: "#0891b2" }, // cyan
-  delivered: { label: "Delivered", color: "#10b981" }, // green
-  cancelled: { label: "Cancelled", color: "#ef4444" }, // red
-  returned: { label: "Returned", color: "#7c3aed" }, // purple
-  other: { label: "Other", color: "#64748b" }, // slate
+  opened: { label: "Opened", color: "#06b6d4" },
+  "in-progress": { label: "In Progress", color: "#f59e0b" },
+  "out-for-delivery": { label: "Out for Delivery", color: "#0891b2" },
+  delivered: { label: "Delivered", color: "#10b981" },
+  cancelled: { label: "Cancelled", color: "#ef4444" },
+  returned: { label: "Returned", color: "#7c3aed" },
+  other: { label: "Other", color: "#64748b" },
 };
 
-/* Helpers */
 function formatDate(utcDate) {
   if (!utcDate || utcDate === "N/A") return "N/A";
   try {
@@ -25,8 +23,7 @@ function formatDate(utcDate) {
 }
 
 function shorten(text = "", max = 80) {
-  if (!text) return "";
-  return text.length <= max ? text : text.slice(0, max).trim() + "...";
+  return text?.length <= max ? text : text?.slice(0, max).trim() + "...";
 }
 
 function normalizeStatus(rawStatus) {
@@ -50,17 +47,14 @@ export default function MyOrders() {
   const [statusCounts, setStatusCounts] = useState({});
   const resultRef = useRef(null);
 
-  /* Load saved mobile on mount */
   useEffect(() => {
     const saved = localStorage.getItem("savedMobile");
     if (saved) {
       setMobile(saved);
       searchOrders(saved);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /* sanitize input to digits only and max 10 */
   const sanitizeMobileInput = (value) => value.replace(/\D/g, "").slice(0, 10);
   const handleMobileChange = (e) => {
     setMobile(sanitizeMobileInput(e.target.value));
@@ -82,15 +76,25 @@ export default function MyOrders() {
     localStorage.setItem("savedMobile", m);
     setLoading(true);
 
+    if (!VITE_ORDERS_API) {
+      setErrorMsg("Orders API not configured. Add VITE_ORDERS_API to your .env or to your deployment environment.");
+      setLoading(false);
+      return;
+    }
+
     try {
-        const resp = await fetch(`${VITE_ORDERS_API}?mobile=${m}`);
+      const resp = await fetch(`${VITE_ORDERS_API}?mobile=${encodeURIComponent(m)}`);
+      if (!resp.ok) {
+        const text = await resp.text().catch(() => "");
+        throw new Error(`Network error ${resp.status}: ${text}`);
+      }
       const data = await resp.json();
 
-      if (data.success && Array.isArray(data.orders)) {
-        const normalized = data.orders.map((o) => {
-          const key = normalizeStatus(o["Orders"]);
-          return { ...o, _statusKey: key };
-        });
+      if (data?.success && Array.isArray(data.orders)) {
+        const normalized = data.orders.map((o) => ({
+          ...o,
+          _statusKey: normalizeStatus(o?.Orders)
+        }));
         setOrders(normalized);
 
         const counts = {};
@@ -100,8 +104,21 @@ export default function MyOrders() {
         });
         setStatusCounts(counts);
         setErrorMsg("");
+      } else if (Array.isArray(data)) {
+        const normalized = data.map((o) => ({
+          ...o,
+          _statusKey: normalizeStatus(o?.Orders)
+        }));
+        setOrders(normalized);
+        const counts = {};
+        normalized.forEach((o) => {
+          const k = o._statusKey || "other";
+          counts[k] = (counts[k] || 0) + 1;
+        });
+        setStatusCounts(counts);
+        setErrorMsg("");
       } else {
-        setErrorMsg(data.message || "No orders found for this number.");
+        setErrorMsg(data?.message || JSON.stringify(data) || "No orders found for this number.");
       }
     } catch (err) {
       console.error("Fetch error:", err);
@@ -109,7 +126,7 @@ export default function MyOrders() {
     } finally {
       setLoading(false);
       setTimeout(() => {
-        if (resultRef.current) resultRef.current.scrollIntoView({ behavior: "smooth" });
+        resultRef.current?.scrollIntoView({ behavior: "smooth" });
       }, 220);
     }
   }
@@ -124,11 +141,9 @@ export default function MyOrders() {
   }, [statusCounts, orders.length]);
 
   const filteredOrders = useMemo(() => {
-    if (activeFilter === "all") return orders;
-    return orders.filter((o) => o._statusKey === activeFilter);
+    return activeFilter === "all" ? orders : orders.filter((o) => o._statusKey === activeFilter);
   }, [orders, activeFilter]);
 
-  /* PDF export using html2pdf (global) */
   const handleDownload = async (orderIndex) => {
     const order = orders[orderIndex];
     if (!order) {
@@ -150,14 +165,14 @@ export default function MyOrders() {
         <hr style="margin:12px 0;" />
       </div>
       <div>
-        <p><strong>Ordered On:</strong> ${formatDate(order["timestamp"])}</p>
-        <p><strong>Name:</strong> ${order["Name"] || "N/A"}</p>
-        <p><strong>Rice Brand:</strong> ${order["Brand"] || "N/A"}</p>
-        <p><strong>Weight Per Bag:</strong> ${order["Weight per Bag"] || "N/A"}</p>
-        <p><strong>Total Bags:</strong> ${order["Bags"] || "N/A"}</p>
-        <p><strong>Total Price:</strong> ${order["Total Price"] || "N/A"}</p>
-        <p><strong>Address:</strong> ${order["Address"] || "N/A"}</p>
-        <p><strong>Status:</strong> ${order["Orders"] || "N/A"}</p>
+        <p><strong>Ordered On:</strong> ${formatDate(order?.timestamp)}</p>
+        <p><strong>Name:</strong> ${order?.Name || "N/A"}</p>
+        <p><strong>Rice Brand:</strong> ${order?.Brand || "N/A"}</p>
+        <p><strong>Weight Per Bag:</strong> ${order?.["Weight per Bag"] || "N/A"}</p>
+        <p><strong>Total Bags:</strong> ${order?.Bags || "N/A"}</p>
+        <p><strong>Total Price:</strong> ${order?.["Total Price"] || "N/A"}</p>
+        <p><strong>Address:</strong> ${order?.Address || "N/A"}</p>
+        <p><strong>Status:</strong> ${order?.Orders || "N/A"}</p>
       </div>
       <hr style="margin:14px 0;" />
       <div style="text-align:center; font-size:13px;">Thank you for ordering from srilakshmirice.com</div>
@@ -197,7 +212,6 @@ export default function MyOrders() {
 
   return (
     <div className="myorders-root">
-      {/* Search */}
       <div className="search-container">
         <div className="search-bar" role="search">
           <input
@@ -208,7 +222,7 @@ export default function MyOrders() {
             placeholder="Enter 10-digit mobile number"
             value={mobile}
             onChange={handleMobileChange}
-            onKeyDown={(e) => { if (e.key === "Enter") searchOrders(); }}
+            onKeyDown={(e) => e.key === "Enter" && searchOrders()}
           />
           {mobile && (
             <button className="clear-btn" aria-label="Clear mobile" onClick={handleClear}>
@@ -226,25 +240,27 @@ export default function MyOrders() {
           </button>
         </div>
 
-        {errorMsg && <div className="error-msg" role="alert"><i className="fa-solid fa-circle-exclamation" /> {errorMsg}</div>}
+        {errorMsg && (
+          <div className="error-msg" role="alert">
+            <i className="fa-solid fa-circle-exclamation" /> {errorMsg}
+          </div>
+        )}
       </div>
 
-      {/* Filters */}
       {orders.length > 0 && (
         <div className="filter-bar" ref={resultRef}>
           {filters.map((f) => (
-              <button
-                key={f.key}
-                className={`filter-tag ${f.key} ${activeFilter === f.key ? "active" : ""}`}
-                onClick={() => setActiveFilter(f.key)}
-              >
-                {f.label}
-              </button>
-            ))}
+            <button
+              key={f.key}
+              className={`filter-tag ${f.key} ${activeFilter === f.key ? "active" : ""}`}
+              onClick={() => setActiveFilter(f.key)}
+            >
+              {f.label}
+            </button>
+          ))}
         </div>
       )}
 
-      {/* Results */}
       <div className="order-list">
         {loading && (
           <div className="loading-card">
@@ -255,33 +271,34 @@ export default function MyOrders() {
           </div>
         )}
 
-        {loading && Array.from({ length: 4 }).map((_, i) => (
-          <article key={i} className="order-card skeleton-card">
-            <div className="order-top">
-              <div>
-                <h4 className="skeleton skeleton-text medium" />
-                <div className="order-date skeleton skeleton-text short" />
+        {loading &&
+          Array.from({ length: 4 }).map((_, i) => (
+            <article key={`skeleton-${i}`} className="order-card skeleton-card">
+              <div className="order-top">
+                <div>
+                  <h4 className="skeleton skeleton-text medium" />
+                  <div className="order-date skeleton skeleton-text short" />
+                </div>
+                <div className="status-badge skeleton skeleton-text short" />
               </div>
-              <div className="status-badge skeleton skeleton-text short" />
-            </div>
 
-            <div className="order-main">
-              <div className="brand skeleton skeleton-text medium" />
-              <div className="price skeleton skeleton-text short" />
-            </div>
+              <div className="order-main">
+                <div className="brand skeleton skeleton-text medium" />
+                <div className="price skeleton skeleton-text short" />
+              </div>
 
-            <div className="order-meta skeleton skeleton-text long" />
+              <div className="order-meta skeleton skeleton-text long" />
 
-            <div className="order-customer">
-              <div className="name skeleton skeleton-text medium" />
-              <div className="address skeleton skeleton-text long" />
-            </div>
+              <div className="order-customer">
+                <div className="name skeleton skeleton-text medium" />
+                <div className="address skeleton skeleton-text long" />
+              </div>
 
-            <div className="order-actions">
-              <button className="download-btn skeleton skeleton-text medium" />
-            </div>
-          </article>
-        ))}
+              <div className="order-actions">
+                <button className="download-btn skeleton skeleton-text medium" />
+              </div>
+            </article>
+          ))}
 
         {!loading && orders.length === 0 && (
           <div className="empty-card">
@@ -289,49 +306,54 @@ export default function MyOrders() {
           </div>
         )}
 
-        {!loading && filteredOrders.map((order, idx) => {
-          const globalIndex = orders.indexOf(order);
-          const styleInfo = STATUS_STYLES[order._statusKey] || STATUS_STYLES.other;
+        {!loading &&
+          filteredOrders.map((order, idx) => {
+            const globalIndex = orders.indexOf(order);
+            const styleInfo = STATUS_STYLES[order._statusKey] || STATUS_STYLES.other;
 
-          return (
-            <article
-              key={`${globalIndex}-${order.timestamp || idx}`}
-              className={`order-card ${order._statusKey}`}
-            >
-              <div className="order-top">
-                <div>
-                  <h4>Order {globalIndex + 1}</h4>
-                  <div className="order-date">{formatDate(order["timestamp"])}</div>
+            return (
+              <article
+                key={`${order?.timestamp || idx}-${globalIndex}`}
+                className={`order-card ${order._statusKey}`}
+              >
+                <div className="order-top">
+                  <div>
+                    <h4 aria-label={`Order number ${globalIndex + 1}`}>Order {globalIndex + 1}</h4>
+                    <div className="order-date">{formatDate(order?.timestamp)}</div>
+                  </div>
+                  <div className={`status-badge ${order._statusKey}`}>
+                    {styleInfo.label}
+                  </div>
                 </div>
-                <div className={`status-badge ${order._statusKey}`}>
-                  {styleInfo.label}
+
+                <div className="order-main">
+                  <div className="brand">{order?.Brand || "—"}</div>
+                  <div className="price">₹ {order?.["Total Price"] ?? "—"}</div>
                 </div>
-              </div>
 
-              <div className="order-main">
-                <div className="brand">{order["Brand"] || "—"}</div>
-                <div className="price">₹ {order["Total Price"] ?? "—"}</div>
-              </div>
+                <div className="order-meta">
+                  <span>{order?.["Weight per Bag"] || "—"}</span>
+                  <span>•</span>
+                  <span>{order?.Bags || "—"} bag(s)</span>
+                </div>
 
-              <div className="order-meta">
-                <span>{order["Weight per Bag"] || "—"}</span>
-                <span>•</span>
-                <span>{order["Bags"] || "—"} bag(s)</span>
-              </div>
+                <div className="order-customer">
+                  <div className="name">{order?.Name || "Customer"}</div>
+                  <div className="address">{order?.Address ? shorten(order?.Address, 96) : "Address not provided"}</div>
+                </div>
 
-              <div className="order-customer">
-                <div className="name">{order["Name"] || "Customer"}</div>
-                <div className="address">{order["Address"] ? shorten(order["Address"], 96) : "Address not provided"}</div>
-              </div>
-
-              <div className="order-actions">
-                <button className="download-btn" onClick={() => handleDownload(globalIndex)} title="Download PDF">
-                  <i className="fa-solid fa-file-arrow-down" /> <span>PDF</span>
-                </button>
-              </div>
-            </article>
-          );
-        })}
+                <div className="order-actions">
+                  <button
+                    className="download-btn"
+                    onClick={() => handleDownload(globalIndex)}
+                    title="Download PDF"
+                  >
+                    <i className="fa-solid fa-file-arrow-down" /> <span>PDF</span>
+                  </button>
+                </div>
+              </article>
+            );
+          })}
       </div>
     </div>
   );
