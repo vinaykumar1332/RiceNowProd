@@ -7,6 +7,7 @@ import { cleanTags } from "../../utils/helpers"; // Adjust path if needed
 
 const PRODUCTS_API = VITE_PRODUCTS_API;
 
+/* ---------- CartDrawer (unchanged behavior) ---------- */
 function CartDrawer({ open, onClose, items, onInc, onDec, onRemove }) {
   const total = useMemo(() => items.reduce((s, i) => s + (Number(i.offer_price ?? i.price ?? 0) * i.qty), 0), [items]);
   return (
@@ -28,7 +29,7 @@ function CartDrawer({ open, onClose, items, onInc, onDec, onRemove }) {
                 />
                 <div>
                   <div className="cart-title">{it.title}</div>
-                  <div className="cart-meta">₹{Number(it.offer_price ?? it.price ?? 0).toFixed(2)} | Weight: {it.weight || "—"} | Qty: {it.qty}</div>
+                  <div className="cart-meta">₹{Number(it.offer_price ?? it.price ?? 0).toFixed(2)} |{it.weight || "—"} | Qty: {it.qty}</div>
                 </div>
               </div>
               <div className="cart-actions">
@@ -59,22 +60,18 @@ function CartDrawer({ open, onClose, items, onInc, onDec, onRemove }) {
 CartDrawer.propTypes = {
   open: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
-  items: PropTypes.arrayOf(PropTypes.shape({
-    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    title: PropTypes.string,
-    offer_price: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    price: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    qty: PropTypes.number,
-    weight: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    images: PropTypes.arrayOf(PropTypes.string),
-    image: PropTypes.string,
-  })).isRequired,
+  items: PropTypes.array.isRequired,
   onInc: PropTypes.func.isRequired,
   onDec: PropTypes.func.isRequired,
   onRemove: PropTypes.func.isRequired,
 };
 
-function FilterPanel({ open, onClose, filters, current, setCurrent, onReset, tags }) {
+/* ---------- FilterPanel updated to match your request ----------
+   - Brand: radio buttons (single select)
+   - Category: tags (chips, multi-select)
+   - Price ranges: checkboxes (same as before)
+   - Kgs: radio buttons (single select) */
+function FilterPanel({ open, onClose, filters, current, setCurrent, onReset }) {
   const priceRanges = useMemo(() => [
     { label: "Under ₹100", min: 0, max: 100 },
     { label: "₹100 - ₹500", min: 100, max: 500 },
@@ -82,41 +79,69 @@ function FilterPanel({ open, onClose, filters, current, setCurrent, onReset, tag
     { label: "Over ₹1000", min: 1000, max: Infinity },
   ], []);
 
+  const brands = useMemo(() => Array.from(filters.brands || []), [filters.brands]);
+  const kgOptions = useMemo(() => Array.from(filters.kgs || []), [filters.kgs]); // e.g. "250g", "500g", "1kg"
+
   return (
     <div className={`filter-panel ${open ? "open" : ""}`} aria-hidden={!open}>
       <div className="filter-head">
         <h3>Filters</h3>
         <button className="drawer-close" onClick={onClose}>✕</button>
       </div>
+
       <div className="filter-body">
+        <section className="filter-section-brand">
+          <h4>Brand</h4>
+          <div className="brand-radios">
+            <label>
+              <input
+                type="radio"
+                name="brand"
+                value=""
+                checked={!current.brand}
+                onChange={() => setCurrent((c) => ({ ...c, brand: null }))}
+              />
+              All
+            </label>
+            {brands.map((b) => (
+              <label key={b}>
+                <input
+                  type="radio"
+                  name="brand"
+                  value={b}
+                  checked={String(current.brand) === String(b)}
+                  onChange={() => setCurrent((c) => ({ ...c, brand: b }))}
+                />
+                {b}
+              </label>
+            ))}
+          </div>
+        </section>
+
         <section>
           <h4>Category</h4>
-          <select
-            value={current.category || ""}
-            onChange={(e) => setCurrent((c) => ({ ...c, category: e.target.value || null }))}
-          >
-            <option value="">All</option>
-            {[...filters.categories].map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
-              </option>
+          <div className="chips">
+            {(filters.tags || []).map((tag) => (
+              <button
+                key={tag}
+                className={`chip ${current.tags?.includes(tag) ? "active" : ""}`}
+                onClick={() => {
+                  setCurrent((c) => {
+                    const tgs = c.tags ? [...c.tags] : [];
+                    const idx = tgs.indexOf(tag);
+                    if (idx > -1) tgs.splice(idx, 1);
+                    else tgs.push(tag);
+                    return { ...c, tags: tgs };
+                  });
+                }}
+              >
+                {tag}
+              </button>
             ))}
-          </select>
+            {(filters.tags || []).length === 0 && (<div className="small-muted">No categories found</div>)}
+          </div>
         </section>
-        <section>
-          <h4>Subcategory</h4>
-          <select
-            value={current.subcategory || ""}
-            onChange={(e) => setCurrent((c) => ({ ...c, subcategory: e.target.value || null }))}
-          >
-            <option value="">All</option>
-            {[...filters.subcategories].map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-        </section>
+
         <section>
           <h4>Price Ranges</h4>
           <div className="price-checkboxes">
@@ -142,35 +167,39 @@ function FilterPanel({ open, onClose, filters, current, setCurrent, onReset, tag
             ))}
           </div>
         </section>
-        <section>
-          <h4>Tags</h4>
-          <div className="chips">
-            {tags.map((tag) => (
-              <button
-                key={tag}
-                className={`chip ${current.tags?.includes(tag) ? "active" : ""}`}
-                onClick={() => {
-                  setCurrent((c) => {
-                    const tgs = c.tags ? [...c.tags] : [];
-                    const index = tgs.indexOf(tag);
-                    if (index > -1) tgs.splice(index, 1);
-                    else tgs.push(tag);
-                    return { ...c, tags: tgs };
-                  });
-                }}
-              >
-                {tag}
-              </button>
+
+        <section className="filter-section-kg">
+          <h4>Kgs</h4>
+          <div className="kg-radios">
+            <label>
+              <input
+                type="radio"
+                name="kgs"
+                value=""
+                checked={!current.kgs}
+                onChange={() => setCurrent((c) => ({ ...c, kgs: null }))}
+              />
+              All
+            </label>
+            {kgOptions.map((k) => (
+              <label key={k}>
+                <input
+                  type="radio"
+                  name="kgs"
+                  value={k}
+                  checked={String(current.kgs) === String(k)}
+                  onChange={() => setCurrent((c) => ({ ...c, kgs: k }))}
+                />
+                {k}
+              </label>
             ))}
+            {kgOptions.length === 0 && <div className="small-muted">No weight info</div>}
           </div>
         </section>
-        <div style={{ marginTop: 12 }}>
-          <button className="btn primary" onClick={onClose}>
-            Apply
-          </button>
-          <button className="btn" onClick={onReset} style={{ marginLeft: 8 }}>
-            Reset
-          </button>
+
+        <div className="filter-actions">
+          <button className="btn primary" onClick={onClose}>Apply</button>
+          <button className="btn" onClick={onReset} style={{ marginLeft: 8 }}>Reset</button>
         </div>
       </div>
     </div>
@@ -181,36 +210,31 @@ FilterPanel.propTypes = {
   open: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
   filters: PropTypes.shape({
-    categories: PropTypes.instanceOf(Set).isRequired,
-    subcategories: PropTypes.instanceOf(Set).isRequired,
-  }).isRequired,
-  current: PropTypes.shape({
-    category: PropTypes.string,
-    subcategory: PropTypes.string,
-    priceRanges: PropTypes.arrayOf(PropTypes.string),
+    brands: PropTypes.instanceOf(Set),
+    kgs: PropTypes.instanceOf(Set),
     tags: PropTypes.arrayOf(PropTypes.string),
   }).isRequired,
+  current: PropTypes.object.isRequired,
   setCurrent: PropTypes.func.isRequired,
   onReset: PropTypes.func.isRequired,
-  tags: PropTypes.arrayOf(PropTypes.string).isRequired,
 };
 
+/* ---------- ProductDetailsOverlay (unchanged except safe displays) ---------- */
 function ProductDetailsOverlay({ product, onClose, onAdd, onRemove, qty }) {
   if (!product) return null;
-  const { title, description, price, offer_price, images, image, weight, tags, tags_array, category, subcategory } = product;
+  const { title, description, price, offer_price, images, image, weight, tags, tags_array, brand } = product;
   const imageList = useMemo(() => Array.isArray(images) && images.length ? images : image ? [image] : [], [images, image]);
   const tagList = useMemo(() => cleanTags(tags, tags_array), [tags, tags_array]);
   return (
     <div className="details-overlay open" onClick={onClose}>
       <div className="details-content" onClick={(e) => e.stopPropagation()}>
         <button className="drawer-close" onClick={onClose}>✕</button>
-        <img src={imageList[0]} alt={title} className="details-image" />
+        {imageList[0] && <img src={imageList[0]} alt={title} className="details-image" />}
         <h2>{title}</h2>
-        <p><strong>Category:</strong> {category}</p>
-        <p><strong>Subcategory:</strong> {subcategory}</p>
+        {brand && <p><strong>Brand:</strong> {brand}</p>}
         <p>{description}</p>
-        <p><strong>Price:</strong> ₹{offer_price || price}</p>
-        <p><strong>Weight:</strong> {weight}</p>
+        <p><strong>Price:</strong> ₹{offer_price ?? price}</p>
+        <p> {weight}</p>
         <div className="tags">
           {tagList.map((t, i) => <span key={i} className="tag">{t}</span>)}
         </div>
@@ -231,25 +255,14 @@ function ProductDetailsOverlay({ product, onClose, onAdd, onRemove, qty }) {
 }
 
 ProductDetailsOverlay.propTypes = {
-  product: PropTypes.shape({
-    title: PropTypes.string,
-    description: PropTypes.string,
-    price: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    offer_price: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    images: PropTypes.arrayOf(PropTypes.string),
-    image: PropTypes.string,
-    weight: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    tags: PropTypes.string,
-    tags_array: PropTypes.arrayOf(PropTypes.string),
-    category: PropTypes.string,
-    subcategory: PropTypes.string,
-  }),
+  product: PropTypes.object,
   onClose: PropTypes.func.isRequired,
   onAdd: PropTypes.func.isRequired,
   onRemove: PropTypes.func.isRequired,
   qty: PropTypes.number.isRequired,
 };
 
+/* ---------- Main Products component (updated filtering model) ---------- */
 export default function Products() {
   const [products, setProducts] = useState([]);
   const [raw, setRaw] = useState([]);
@@ -258,9 +271,20 @@ export default function Products() {
   const [cart, setCart] = useState([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
-  const [filters, setFilters] = useState({ categories: new Set(), subcategories: new Set(), minPrice: 0, maxPrice: 1000 });
-  const [currentFilter, setCurrentFilter] = useState({ category: null, subcategory: null, maxPrice: 100000, priceRanges: [], tags: [] });
-  const [allTags, setAllTags] = useState([]);
+  const [filters, setFilters] = useState({
+    brands: new Set(),
+    kgs: new Set(),
+    tags: [],
+    minPrice: 0,
+    maxPrice: 1000,
+  });
+  const [currentFilter, setCurrentFilter] = useState({
+    brand: null,        // single brand radio
+    kgs: null,          // single kgs radio
+    maxPrice: 100000,
+    priceRanges: [],    // array of range labels
+    tags: [],           // multi-select (acts as category)
+  });
   const [selectedProduct, setSelectedProduct] = useState(null);
 
   const priceRanges = useMemo(() => [
@@ -279,28 +303,41 @@ export default function Products() {
     return [];
   };
 
+  // Build brands & weights & tags sets from rows
   const processFilters = (rows) => {
-    const cats = new Set();
-    const subs = new Set();
+    const brands = new Set();
+    const kgs = new Set();
     const tagsSet = new Set();
     let min = Number.POSITIVE_INFINITY;
     let max = Number.NEGATIVE_INFINITY;
+
     rows.forEach((r) => {
-      if (r.category) cats.add(r.category);
-      if (r.subcategory) subs.add(r.subcategory);
+      // common brand keys: brand, manufacturer, mfg, vendor - try them
+      const brand = r.brand ?? r.manufacturer ?? r.mfg ?? r.vendor ?? null;
+      if (brand) brands.add(String(brand).trim());
+
+      // weight: keep raw string if present (normalization could be done as needed)
+      const w = r.weight ?? r.weight_text ?? r.unit ?? null;
+      if (w) {
+        const ws = String(w).trim();
+        if (ws) kgs.add(ws);
+      }
+
       cleanTags(r.tags, r.tags_array).forEach(t => tagsSet.add(t));
+
       const p = Number(r.offer_price ?? r.price ?? 0);
       if (!Number.isNaN(p)) {
         min = Math.min(min, p);
         max = Math.max(max, p);
       }
     });
+
     return {
-      categories: cats,
-      subcategories: subs,
+      brands,
+      kgs,
+      tags: [...tagsSet],
       minPrice: Number.isFinite(min) ? Math.floor(min) : 0,
       maxPrice: Number.isFinite(max) ? Math.ceil(max) : 0,
-      tags: [...tagsSet],
     };
   };
 
@@ -324,14 +361,17 @@ export default function Products() {
         const rows = extractProducts(data);
         setRaw(rows);
         setProducts(rows);
+
         const processed = processFilters(rows);
         setFilters({
-          categories: processed.categories,
-          subcategories: processed.subcategories,
+          brands: processed.brands,
+          kgs: processed.kgs,
+          tags: processed.tags,
           minPrice: processed.minPrice,
           maxPrice: processed.maxPrice,
         });
-        setAllTags(processed.tags);
+
+        // set sensible defaults for current filter
         setCurrentFilter((c) => ({ ...c, maxPrice: processed.maxPrice }));
       })
       .catch((err) => {
@@ -341,36 +381,56 @@ export default function Products() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => {
-    fetchProducts();
-  }, []);
+  useEffect(() => { fetchProducts(); }, []);
 
+  // Filtering effect: apply brand, price ranges, maxPrice, tags (category), and kgs
   useEffect(() => {
     const filtered = raw.filter((p) => {
       const pPrice = Number(p.offer_price ?? p.price ?? 0);
+
+      // price range match if any selected
       if (currentFilter.priceRanges?.length > 0) {
         const matchesRange = currentFilter.priceRanges.some(rangeLabel => {
           const range = priceRanges.find(r => r.label === rangeLabel);
           if (!range) return false;
-          return pPrice >= range.min && (range.max === Infinity || pPrice < range.max);
+          return pPrice >= range.min && (range.max === Infinity ? pPrice >= range.min : pPrice < range.max);
         });
         if (!matchesRange) return false;
       }
+
+      // max price cutoff
       if (pPrice > (currentFilter.maxPrice ?? Number.POSITIVE_INFINITY)) return false;
-      if (currentFilter.category && String(p.category) !== String(currentFilter.category)) return false;
-      if (currentFilter.subcategory && String(p.subcategory) !== String(currentFilter.subcategory)) return false;
+
+      // brand radio (single)
+      const pBrand = p.brand ?? p.manufacturer ?? p.mfg ?? p.vendor ?? null;
+      if (currentFilter.brand && String(pBrand) !== String(currentFilter.brand)) return false;
+
+      // kgs radio (single) - compare with weight string
+      if (currentFilter.kgs) {
+        const pWeight = p.weight ?? p.weight_text ?? p.unit ?? "";
+        if (!pWeight || String(pWeight) !== String(currentFilter.kgs)) return false;
+      }
+
+      // tags (category) multi-select: product must contain at least one selected tag
       if (currentFilter.tags?.length > 0) {
         const pTags = cleanTags(p.tags, p.tags_array);
         if (!currentFilter.tags.some(t => pTags.includes(t))) return false;
       }
+
       return true;
     });
+
     setProducts(filtered);
   }, [currentFilter, raw, priceRanges]);
 
+  /* ---------- Cart helpers (unchanged) ---------- */
   const addToCart = (product) => {
     if (!product) return;
-    const isActive = String(product.active ?? product.stock ?? "").toLowerCase() === "active";
+    // treat product as active if property 'active' or 'stock' equals 'active' (string) OR stock numeric > 0
+    const activeVal = (product.active ?? product.stock ?? "");
+    const isActive = (typeof activeVal === "string" && activeVal.toLowerCase() === "active")
+      || (typeof activeVal === "number" && activeVal > 0)
+      || activeVal === true;
     if (!isActive) return;
     setCart((prev) => {
       const foundIndex = prev.findIndex((i) => (i.id ?? i.title) === (product.id ?? product.title));
@@ -410,11 +470,18 @@ export default function Products() {
   const totalCartItems = useMemo(() => cart.reduce((s, i) => s + i.qty, 0), [cart]);
 
   const resetFilters = () => {
-    setCurrentFilter({ category: null, subcategory: null, maxPrice: filters.maxPrice ?? 999999, priceRanges: [], tags: [] });
+    setCurrentFilter({
+      brand: null,
+      kgs: null,
+      maxPrice: filters.maxPrice ?? 999999,
+      priceRanges: [],
+      tags: [],
+    });
   };
 
+  /* ---------- Render ---------- */
   return (
-    <div className="page products-page-wrapper" style={{ padding: 16 }}>
+    <div className="page products-page-wrapper" >
       <div className="page-head" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <button className="btn filter-btn" onClick={() => setFilterOpen((f) => !f)} aria-expanded={filterOpen}>
@@ -422,6 +489,7 @@ export default function Products() {
           </button>
         </div>
       </div>
+
       <div style={{ marginTop: 12 }}>
         {loading && (
           <div className="cards-parent" aria-busy="true">
@@ -437,21 +505,22 @@ export default function Products() {
             ))}
           </div>
         )}
+
         {!loading && error && (
           <div style={{ padding: 16, background: "#fff6f6", borderRadius: 8 }}>
             <div style={{ color: "#b33", fontWeight: 700 }}>Error: {error}</div>
             <div style={{ marginTop: 8 }}>
-              <button className="btn primary" onClick={fetchProducts}>
-                Try again
-              </button>
+              <button className="btn primary" onClick={fetchProducts}>Try again</button>
             </div>
           </div>
         )}
+
         {!loading && !error && products.length === 0 && (
           <div style={{ padding: 16 }}>
             No products found. <button className="btn" onClick={resetFilters}>Reset filters</button>
           </div>
         )}
+
         {!loading && !error && products.length > 0 && (
           <div className="products-section-wrapper" style={{ marginTop: 12 }}>
             <div className="cards-parent">
@@ -469,6 +538,7 @@ export default function Products() {
           </div>
         )}
       </div>
+
       <FilterPanel
         open={filterOpen}
         onClose={() => setFilterOpen(false)}
@@ -476,13 +546,15 @@ export default function Products() {
         current={currentFilter}
         setCurrent={setCurrentFilter}
         onReset={resetFilters}
-        tags={allTags}
       />
+
       <CartDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} items={cart} onInc={addToCart} onDec={removeOne} onRemove={removeAll} />
+
       <button className="cart-badge-btn" onClick={() => setDrawerOpen(true)} aria-label="Open cart">
         <i className="cart-icon">🛒</i>
         {totalCartItems > 0 && <span className="badge">{totalCartItems}</span>}
       </button>
+
       <ProductDetailsOverlay
         product={selectedProduct}
         onClose={() => setSelectedProduct(null)}

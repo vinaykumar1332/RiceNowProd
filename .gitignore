@@ -1,9 +1,9 @@
 # Dependencies
 node_modules
 
-# Build output
-dist
-dist-ssr
+# # Build output
+# dist
+# dist-ssr
 
 # Logs
 logs
