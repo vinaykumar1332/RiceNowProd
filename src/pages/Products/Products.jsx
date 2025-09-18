@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import PropTypes from 'prop-types';
 import Cards from "./cards/cards"; // Adjust path if needed
-import "./products.css";
+import "./Products.css";
 import { VITE_PRODUCTS_API } from "../../API"; // Adjust path if needed
 import { cleanTags } from "../../utils/helpers"; // Adjust path if needed
 
