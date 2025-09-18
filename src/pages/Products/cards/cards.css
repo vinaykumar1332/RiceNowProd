@@ -1,0 +1,478 @@
+/* Cards.css - Enhanced responsive grid + card styles with animations, transitions, and adaptive font sizes */
+
+/* Define reusable CSS variables for consistency */
+:root {
+  --card-bg: #ffffff;
+  --card-border: rgba(0, 0, 0, 0.04);
+  --card-shadow: 0 6px 18px rgba(20, 20, 20, 0.06);
+  --text-primary: #111111;
+  --text-secondary: #444444;
+  --text-muted: #888888;
+  --accent-color: #0a7;
+  --error-color: #c33;
+  --bg-light: #fafafa;
+  --bg-gradient: linear-gradient(180deg, #f7f7f7, #fafafa);
+  --bg-dark: #111318;
+  --text-dark: #e7eef6;
+  --muted-dark: #cbd5e1;
+  --border-radius: 12px;
+  --gap: 1rem;
+  --transition-base: all 0.22s cubic-bezier(0.2, 0.9, 0.2, 1);
+  --transition-fast: all 0.12s ease;
+  --font-size-base: 1rem;
+  --font-size-small: 0.875rem;
+  --font-size-xsmall: 0.75rem;
+}
+
+/* Responsive font size adjustments using vmin for screen adaptability */
+@media (max-width: 699px) {
+  :root {
+    --font-size-base: calc(0.9rem + 0.2vmin);
+    --font-size-small: calc(0.8rem + 0.2vmin);
+    --font-size-xsmall: calc(0.7rem + 0.2vmin);
+  }
+}
+@media (min-width: 700px) and (max-width: 1099px) {
+  :root {
+    --font-size-base: calc(0.95rem + 0.2vmin);
+    --font-size-small: calc(0.85rem + 0.2vmin);
+    --font-size-xsmall: calc(0.72rem + 0.2vmin);
+  }
+}
+@media (min-width: 1100px) {
+  :root {
+    --font-size-base: calc(1rem + 0.2vmin);
+    --font-size-small: calc(0.9rem + 0.2vmin);
+    --font-size-xsmall: calc(0.78rem + 0.2vmin);
+  }
+}
+
+/* Grid parent class for cards */
+.cards-parent {
+  display: grid;
+  gap: var(--gap);
+  align-items: start;
+  grid-template-columns: repeat(2, 1fr);
+  padding: var(--gap);
+  transition: var(--transition-base);
+}
+
+/* Responsive grid adjustments */
+@media (min-width: 700px) {
+  .cards-parent {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+@media (min-width: 1100px) {
+  .cards-parent {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+@media (max-width: 699px) {
+  .cards-parent {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Single card styles */
+.card {
+  display: flex;
+  flex-direction: column;
+  background: var(--card-bg);
+  border-radius: var(--border-radius);
+  box-shadow: var(--card-shadow);
+  border: 1px solid var(--card-border);
+  overflow: hidden;
+  transition: var(--transition-base), transform 0.3s ease, box-shadow 0.3s ease;
+  will-change: transform, box-shadow;
+  animation: popIn 0.3s ease-out both;
+}
+
+/* Hover effect with smooth scaling and shadow */
+.card.card-active:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 12px 24px rgba(12, 12, 12, 0.1);
+  border-color: rgba(0, 0, 0, 0.12);
+}
+
+/* Inactive card style */
+.card.card-inactive {
+  filter: grayscale(70%) contrast(0.9);
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* Card media with fixed aspect ratio */
+.card-media {
+  background: var(--bg-light);
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 3 / 2;
+  transition: background var(--transition-fast);
+}
+
+/* Media figure for images */
+.media-figure {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  display: block;
+}
+
+.media-figure img,
+.media-figure .image-placeholder {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.4s ease, opacity 0.3s ease;
+}
+
+/* Image hover zoom effect */
+.media-figure img:hover {
+  transform: scale(1.05);
+  opacity: 0.95;
+}
+
+/* Image placeholder */
+.image-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+  background: var(--bg-gradient);
+  transition: var(--transition-fast);
+}
+
+/* Card body */
+.card-body {
+  padding: 0.75rem 0.875rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-height: 10rem;
+  transition: var(--transition-base);
+  flex: 1;
+}
+
+/* Head row */
+.card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+/* Card title */
+.card-title {
+  font-size: var(--font-size-base);
+  margin: 0;
+  color: var(--text-primary);
+  line-height: 1.3;
+  max-width: 70%;
+  transition: color var(--transition-fast);
+}
+
+/* Category badge */
+.category {
+  background: rgba(0, 0, 0, 0.06);
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  font-size: var(--font-size-xsmall);
+  transition: var(--transition-fast);
+}
+
+/* Stock badge */
+.stock {
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: var(--font-size-xsmall);
+  transition: var(--transition-fast);
+}
+.stock.in {
+  color: var(--accent-color);
+  background: rgba(0, 160, 80, 0.08);
+}
+.stock.out {
+  color: var(--error-color);
+  background: rgba(200, 40, 40, 0.08);
+}
+
+/* Description */
+.desc {
+  font-size: var(--font-size-small);
+  color: var(--text-secondary);
+  margin: 0;
+  min-height: 2.75rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  transition: color var(--transition-fast);
+}
+
+/* Price row */
+.price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-top: 0.375rem;
+}
+
+/* Offer and original price */
+.offer {
+  font-size: var(--font-size-base);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.orig {
+  font-size: var(--font-size-small);
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+/* Info row */
+.info-row {
+  display: flex;
+  gap: 0.75rem;
+  font-size: var(--font-size-xsmall);
+  color: var(--text-secondary);
+  flex-wrap: wrap;
+  margin-top: 0.375rem;
+}
+
+/* Tags */
+.tags {
+  margin-top: 0.5rem;
+  display: flex;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+}
+
+.tag {
+  background: rgba(0, 0, 0, 0.06);
+  padding: 0.25rem 0.5rem;
+  border-radius: 99px;
+  font-size: var(--font-size-xsmall);
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background var(--transition-fast), transform 0.2s ease;
+}
+
+.tag:hover {
+  background: rgba(0, 0, 0, 0.1);
+  transform: scale(1.05);
+}
+
+.tag-more {
+  background: rgba(0, 0, 0, 0.1);
+  font-weight: 700;
+}
+
+.tags-empty {
+  display: flex;
+  gap: 0.375rem;
+  align-items: center;
+}
+
+.tags-empty .dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.2);
+  transition: var(--transition-fast);
+}
+
+/* Actions row */
+.card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+/* Quantity controls */
+.qty-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.qty-btn {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 8px;
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  font-size: 1.25rem;
+  cursor: pointer;
+  transition: var(--transition-fast), transform 0.1s ease;
+}
+
+.qty-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+  transform: scale(1.1);
+}
+
+.qty-btn:active {
+  transform: scale(0.95);
+}
+
+.qty {
+  min-width: 1.75rem;
+  text-align: center;
+  font-weight: 700;
+  font-size: var(--font-size-small);
+}
+
+/* Add button */
+.add-btn {
+  background: linear-gradient(180deg, #ffffff, #f8f8f8);
+  border: 1px solid var(--card-border);
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: var(--font-size-small);
+  transition: var(--transition-fast), transform 0.1s ease;
+}
+
+.add-btn:hover {
+  background: linear-gradient(180deg, #f8f8f8, #f0f0f0);
+  transform: scale(1.05);
+}
+
+.add-btn:active {
+  transform: scale(0.98);
+}
+
+.add-btn[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Details button */
+.details-btn {
+  background: transparent;
+  border: none;
+  padding: 0.375rem 0.5rem;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+  transition: var(--transition-fast), transform 0.1s ease;
+}
+
+.details-btn:hover {
+  color: var(--text-primary);
+  transform: scale(1.05);
+}
+
+/* Skeleton loading styles */
+.skeleton {
+  animation: shine 1.5s infinite linear;
+  background: linear-gradient(90deg, rgba(190, 190, 190, 0.2) 25%, rgba(129, 129, 129, 0.24) 37%, rgba(190, 190, 190, 0.2) 63%);
+  background-size: 400% 100%;
+}
+
+.skel-media {
+  aspect-ratio: 3 / 2;
+  background: #eeeeee;
+}
+
+.skel-line {
+  height: 0.75rem;
+  margin: 0.5rem 0;
+  background: #eeeeee;
+  border-radius: 6px;
+}
+
+.skel-line.short {
+  width: 40%;
+}
+
+.skel-line.medium {
+  width: 70%;
+}
+
+/* Animations */
+@keyframes shine {
+  0% {
+    background-position: 0% 0;
+  }
+  100% {
+    background-position: -135% 0;
+  }
+}
+
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Apply fade-in animation to card content */
+.card-body > * {
+  animation: fadeIn 0.4s ease-out both;
+}
+
+/* Dark theme variables */
+body.theme-dark {
+  --card-bg: var(--bg-dark);
+  --text-primary: var(--text-dark);
+  --text-secondary: var(--muted-dark);
+  --text-muted: var(--muted-dark);
+  --card-border: rgba(255, 255, 255, 0.04);
+  --card-shadow: none;
+  --bg-light: #1a1f2a;
+  --bg-gradient: linear-gradient(180deg, #1a1f2a, #14171f);
+}
+
+body.theme-dark .card {
+  border: 1px solid var(--card-border);
+  box-shadow: var(--card-shadow);
+}
+
+/* Responsive adjustments for mobile */
+@media (max-width: 699px) {
+  .card {
+    flex-direction: row;
+  }
+  .card-media {
+    width: 50%;
+    aspect-ratio: 1 / 1; /* Square on mobile for better fit */
+  }
+  .card-body {
+    width: 50%;
+    min-height: auto;
+    padding: 0.5rem;
+  }
+}
+
+/* Desktop media adjustments */
+@media (min-width: 1100px) {
+  .card-media {
+    aspect-ratio: 16 / 9; /* More landscape on desktop */
+  }
+}
