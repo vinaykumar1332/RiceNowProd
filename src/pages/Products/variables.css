@@ -1,0 +1,38 @@
+:root{
+  /* ---- Colors ---- */
+  --accent-color: #0a7;            /* primary accent */
+  --accent-2: #009977;            /* secondary accent */
+  --brand-primary: #0a7;
+  --text-primary: #111111;
+  --text-secondary: #444444;
+  --text-muted: #888888;
+  --bg-surface: #ffffff;
+  --bg-soft: #fafafa;
+  --card-border: rgba(0,0,0,0.06);
+  --button-border: #cccccc;
+  --danger: #f33;
+
+  /* ---- Typography ---- */
+  --font-family: "Inter", "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-size-base: 0.95rem;
+  --font-size-small: 0.85rem;
+  --font-size-smaller: 0.78rem;
+
+  /* ---- Spacing & radii ---- */
+  --gap: 1rem;
+  --border-radius: 8px;
+  --chip-radius: 18px;
+
+  /* ---- Elevation & transitions ---- */
+  --elevation-1: 0 4px 12px rgba(0,0,0,0.06);
+  --elevation-2: 0 8px 28px rgba(0,0,0,0.09);
+  --transition-base: all 0.22s cubic-bezier(0.2, 0.9, 0.2, 1);
+  --transition-fast: all 0.16s ease-in-out;
+  --transition-smooth: all 0.28s cubic-bezier(0.25,0.8,0.25,1);
+
+  /* UI sizes */
+  --filter-footer-height: 68px;
+  --cart-drawer-width: 380px;
+  --filter-panel-width: 320px;
+  --search-height: 44px;
+}

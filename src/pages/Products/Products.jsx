@@ -2,8 +2,11 @@ import React, { useEffect, useState, useMemo } from "react";
 import PropTypes from "prop-types";
 import Cards from "./cards/cards"; // Adjust path if needed
 import "./Products.css";
+import { FaFilter } from "react-icons/fa6";
+import Search from "./Search/Search"; // adjust path
 import { VITE_PRODUCTS_API } from "../../API"; // Adjust path if needed
 import { cleanTags } from "../../utils/helpers"; // Adjust path if needed
+
 
 const PRODUCTS_API = VITE_PRODUCTS_API;
 
@@ -32,7 +35,6 @@ function CartDrawer({ open, onClose, items, onInc, onDec, onRemove }) {
           <div className="cart-empty">No items added</div>
         ) : (
           items.map((it, i) => {
-            // safe key: prefer id/sku/title, fallback to index
             const cartKey = `${String(it.id ?? it.sku ?? it.title ?? "cart")}-${i}`;
             return (
               <div className="cart-item" key={cartKey}>
@@ -94,7 +96,7 @@ CartDrawer.propTypes = {
   onRemove: PropTypes.func.isRequired,
 };
 
-/* ---------- FilterPanel (same as before, kept for completeness) ---------- */
+/* ---------- FilterPanel (unchanged structure, uses filters.tags as categories) ---------- */
 function FilterPanel({ open, onClose, filters, current, setCurrent, onReset }) {
   const priceRanges = useMemo(
     () => [
@@ -227,7 +229,6 @@ function FilterPanel({ open, onClose, filters, current, setCurrent, onReset }) {
           </div>
         </section>
 
-        {/* NOTE: filter-actions is positioned sticky in CSS; keep it inside filter-body for layout */}
         <div className="filter-actions">
           <button className="btn primary" onClick={onClose}>
             Apply
@@ -329,7 +330,7 @@ export default function Products() {
   const [filters, setFilters] = useState({
     brands: new Set(),
     kgs: new Set(),
-    tags: [],
+    tags: [], // <-- this will represent categories (preferred) or fallback tags
     minPrice: 0,
     maxPrice: 1000,
   });
@@ -341,6 +342,10 @@ export default function Products() {
     tags: [], // multi-select (acts as category)
   });
   const [selectedProduct, setSelectedProduct] = useState(null);
+
+  // New states for search + selectedCategory
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState(null);
 
   const priceRanges = useMemo(
     () => [
@@ -378,11 +383,12 @@ export default function Products() {
     return out;
   };
 
-  // Build brands & weights & tags sets from rows
+  // Build brands & weights & tags & categories sets from rows
   const processFilters = (rows) => {
     const brands = new Set();
     const kgs = new Set();
-    const tagsSet = new Set();
+    const tagsSet = new Set(); // fallback tag list from tags/tags_array
+    const categories = new Set(); // prefer explicit category fields
     let min = Number.POSITIVE_INFINITY;
     let max = Number.NEGATIVE_INFINITY;
 
@@ -396,7 +402,52 @@ export default function Products() {
         if (ws) kgs.add(ws);
       }
 
-      cleanTags(r.tags, r.tags_array).forEach((t) => tagsSet.add(t));
+      // collect tags (fallback)
+      cleanTags(r.tags, r.tags_array).forEach((t) => {
+        if (t) tagsSet.add(t);
+      });
+
+      // try to detect explicit categories from common fields
+      // Accept: string (single), array (multiple), or object with name
+      const catCandidates = [
+        r.category,
+        r.categories,
+        r.category_name,
+        r.cat,
+        r.categoryId,
+        r.taxonomy,
+        r.type,
+        r.group,
+      ];
+
+      catCandidates.forEach((c) => {
+        if (!c) return;
+        if (typeof c === "string") {
+          const val = c.trim();
+          if (val) categories.add(val);
+        } else if (Array.isArray(c)) {
+          c.forEach((x) => {
+            if (!x) return;
+            if (typeof x === "string") {
+              const v = x.trim();
+              if (v) categories.add(v);
+            } else if (x?.name) {
+              const v = String(x.name).trim();
+              if (v) categories.add(v);
+            }
+          });
+        } else if (typeof c === "object" && c !== null) {
+          // object shape like { id, name }
+          const name = c.name ?? c.title ?? c.label;
+          if (name) {
+            const v = String(name).trim();
+            if (v) categories.add(v);
+          }
+        }
+      });
+
+      const pTagsArray = Array.isArray(r.tags) ? r.tags : [];
+      if (Array.isArray(r.tags_array)) pTagsArray.push(...r.tags_array);
 
       const p = Number(r.offer_price ?? r.price ?? 0);
       if (!Number.isNaN(p)) {
@@ -405,10 +456,14 @@ export default function Products() {
       }
     });
 
+    // If explicit categories exist use them as filters.tags (makes Search show categories).
+    // Otherwise fallback to tagsSet (previous behaviour).
+    const finalTags = categories.size > 0 ? [...categories] : [...tagsSet];
+
     return {
       brands,
       kgs,
-      tags: [...tagsSet],
+      tags: finalTags,
       minPrice: Number.isFinite(min) ? Math.floor(min) : 0,
       maxPrice: Number.isFinite(max) ? Math.ceil(max) : 0,
     };
@@ -442,7 +497,7 @@ export default function Products() {
         setFilters({
           brands: processed.brands,
           kgs: processed.kgs,
-          tags: processed.tags,
+          tags: processed.tags, // these are categories if available
           minPrice: processed.minPrice,
           maxPrice: processed.maxPrice,
         });
@@ -462,8 +517,10 @@ export default function Products() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Filtering effect: apply brand, price ranges, maxPrice, tags (category), and kgs
+  // Filtering effect: apply brand, price ranges, maxPrice, tags (category), kgs, search, selectedCategory
   useEffect(() => {
+    const q = (searchQuery || "").trim().toLowerCase();
+
     const filtered = raw.filter((p) => {
       const pPrice = Number(p.offer_price ?? p.price ?? 0);
 
@@ -492,15 +549,76 @@ export default function Products() {
 
       // tags (category) multi-select: product must contain at least one selected tag
       if (currentFilter.tags?.length > 0) {
+        // attempt to match selected categories against explicit category fields OR tags
+        const pCategories = new Set();
+        const catCandidates = [p.category, p.categories, p.category_name, p.cat, p.group];
+        catCandidates.forEach((c) => {
+          if (!c) return;
+          if (typeof c === "string") pCategories.add(c.trim());
+          else if (Array.isArray(c)) {
+            c.forEach((x) => {
+              if (typeof x === "string") pCategories.add(x.trim());
+              else if (x?.name) pCategories.add(String(x.name).trim());
+            });
+          } else if (typeof c === "object" && c?.name) {
+            pCategories.add(String(c.name).trim());
+          }
+        });
+
         const pTags = cleanTags(p.tags, p.tags_array);
-        if (!currentFilter.tags.some((t) => pTags.includes(t))) return false;
+        // match if any of the currentFilter.tags are in pCategories or pTags
+        const anyMatch = currentFilter.tags.some((t) => {
+          return pCategories.has(t) || (Array.isArray(pTags) && pTags.includes(t));
+        });
+
+        if (!anyMatch) return false;
+      }
+
+      // selectedCategory (search chips) - override / act in addition to currentFilter.tags
+      if (selectedCategory) {
+        const pCategories = new Set();
+        const catCandidates = [p.category, p.categories, p.category_name, p.cat, p.group];
+        catCandidates.forEach((c) => {
+          if (!c) return;
+          if (typeof c === "string") pCategories.add(c.trim());
+          else if (Array.isArray(c)) {
+            c.forEach((x) => {
+              if (typeof x === "string") pCategories.add(x.trim());
+              else if (x?.name) pCategories.add(String(x.name).trim());
+            });
+          } else if (typeof c === "object" && c?.name) {
+            pCategories.add(String(c.name).trim());
+          }
+        });
+
+        const pTags = cleanTags(p.tags, p.tags_array);
+        if (!(pCategories.has(selectedCategory) || (Array.isArray(pTags) && pTags.includes(selectedCategory)))) return false;
+      }
+
+      // Search query: match in title, description, brand, sku, slug, weight or tags
+      if (q) {
+        const pTags = cleanTags(p.tags, p.tags_array);
+        const hay = [
+          p.title,
+          p.description,
+          p.brand,
+          p.sku,
+          p.slug,
+          p.weight,
+          ...(Array.isArray(pTags) ? pTags : []),
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+
+        if (!hay.includes(q)) return false;
       }
 
       return true;
     });
 
     setProducts(filtered);
-  }, [currentFilter, raw, priceRanges]);
+  }, [currentFilter, raw, priceRanges, searchQuery, selectedCategory]);
 
   /* ---------- Cart helpers ---------- */
   const addToCart = (product) => {
@@ -551,6 +669,8 @@ export default function Products() {
   const totalCartItems = useMemo(() => cart.reduce((s, i) => s + (i.qty ?? 0), 0), [cart]);
 
   const resetFilters = () => {
+    setSearchQuery("");
+    setSelectedCategory(null);
     setCurrentFilter({
       brand: null,
       kgs: null,
@@ -563,18 +683,36 @@ export default function Products() {
   /* ---------- Render ---------- */
   return (
     <div className="page products-page-wrapper">
-      <div
-        className="page-head"
-        style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}
-      >
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <button className="btn filter-btn" onClick={() => setFilterOpen((f) => !f)} aria-expanded={filterOpen}>
-            <i className="filter-icon">≡</i> Filters
+      <div className="page-head-wrapper">
+      <div className="page-head">
+        <div className="filterBtn">
+          <button className="btn filter-btn" onClick={() => setFilterOpen((f) => !f)} aria-expanded={filterOpen} title="Toggle filters">
+            <i className="filter-icon"><FaFilter /></i> 
           </button>
+        </div>
+
+        {/* Moved search wrapper here so search + category chips are inside page-head */}
+        <div style={{ marginTop: 12, width: "100%" }}>
+          <Search
+            tags={filters.tags} // filters.tags now represents categories (if available)
+            tagsApi={PRODUCTS_API} // optional: Search will fetch tags/categories if none provided
+            onSearch={(q) => {
+              setSearchQuery(q);
+              // Keep currentFilter.search in sync if you want
+              setCurrentFilter((c) => ({ ...c, search: q }));
+            }}
+            onSelectTag={(tag) => {
+              setSelectedCategory(tag);
+              // sync with currentFilter.tags for consistency (optional)
+              setCurrentFilter((c) => ({ ...c, tags: tag ? [tag] : [] }));
+            }}
+            placeholder="Search rice, brand, weight"
+            debounceMs={300}
+          />
         </div>
       </div>
 
-      <div style={{ marginTop: 12 }}>
+      <div className="page-head-1">
         {loading && (
           <div className="cards-parent" aria-busy="true">
             {Array.from({ length: 6 }).map((_, i) => (
@@ -629,7 +767,7 @@ export default function Products() {
           </div>
         )}
       </div>
-
+</div>
       <FilterPanel
         open={filterOpen}
         onClose={() => setFilterOpen(false)}

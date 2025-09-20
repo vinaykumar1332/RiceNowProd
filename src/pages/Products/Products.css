@@ -1,11 +1,3 @@
-/* ProductsPage.css
-   Complete version — improved button alignment, tags, close button, footer actions sticky,
-   animations, fonts, custom radio/checkbox, and responsive tweaks.
-*/
-
-/* --------------------
-   Variables & base
-   -------------------- */
 :root {
   --border-radius: 8px;
   --gap: 1rem;
@@ -24,13 +16,19 @@
   --font-size-small: 0.85rem;
   --transition-fast: all 0.16s ease-in-out;
   --transition-smooth: all 0.28s cubic-bezier(0.25, 0.8, 0.25, 1);
-  --elevation-1: 0 4px 12px rgba(0,0,0,0.06);
-  --elevation-2: 0 8px 28px rgba(0,0,0,0.09);
-  --filter-footer-height: 68px; /* used to ensure content doesn't hide under the sticky footer */
+  --elevation-1: 0 4px 12px rgba(0, 0, 0, 0.06);
+  --elevation-2: 0 8px 28px rgba(0, 0, 0, 0.09);
+  --filter-footer-height: 68px;
+  /* used to ensure content doesn't hide under the sticky footer */
 }
 
 /* apply font & smoothing globally */
-html, body, button, select, input, label {
+html,
+body,
+button,
+select,
+input,
+label {
   font-family: var(--font-family);
   font-size: var(--font-size-base);
   -webkit-font-smoothing: antialiased;
@@ -82,7 +80,7 @@ html, body, button, select, input, label {
 
 .filter-panel.open {
   transform: translateX(0);
-  box-shadow: 12px 0 40px rgba(0,0,0,0.18);
+  box-shadow: 12px 0 40px rgba(0, 0, 0, 0.18);
 }
 
 /* filter head (title + close) */
@@ -99,7 +97,8 @@ html, body, button, select, input, label {
   gap: 12px;
   position: sticky;
   top: 0;
-  z-index: 12; /* sit above the scrolling body */
+  z-index: 12;
+  /* sit above the scrolling body */
 }
 
 /* modern floating close button */
@@ -253,7 +252,7 @@ html, body, button, select, input, label {
   color: var(--text-secondary);
   cursor: pointer;
   transition: var(--transition-smooth);
-  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
   user-select: none;
 }
 
@@ -268,7 +267,7 @@ html, body, button, select, input, label {
   background: var(--accent-color);
   color: #fff;
   border-color: var(--accent-color);
-  box-shadow: 0 6px 18px rgba(0,128,102,0.18);
+  box-shadow: 0 6px 18px rgba(0, 128, 102, 0.18);
   transform: translateY(-2px);
 }
 
@@ -279,18 +278,19 @@ html, body, button, select, input, label {
   /* Sticky footer positioned at bottom of the filter panel */
   position: sticky;
   bottom: 0;
-  z-index: 14; /* above the body but below header if needed */
+  z-index: 14;
+  /* above the body but below header if needed */
   display: flex;
   justify-content: space-between;
   gap: 12px;
   padding: 12px 16px;
   border-top: 1px solid var(--card-border);
-  background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,255,255,1));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 1));
   backdrop-filter: blur(4px);
   align-items: center;
   /* ensure the footer has explicit height so we can add bottom padding to the scrolling body */
   min-height: var(--filter-footer-height);
-  box-shadow: 0 -6px 18px rgba(0,0,0,0.04);
+  box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.04);
 }
 
 /* make both buttons flex:1 and consistent heights */
@@ -320,7 +320,7 @@ html, body, button, select, input, label {
   background: linear-gradient(135deg, var(--accent-color), #009977);
   color: #fff;
   border: none;
-  box-shadow: 0 6px 18px rgba(0,128,102,0.12);
+  box-shadow: 0 6px 18px rgba(0, 128, 102, 0.12);
 }
 
 .filter-actions button.apply:hover,
@@ -356,6 +356,7 @@ html, body, button, select, input, label {
     padding: 10px 12px;
     min-height: 62px;
   }
+
   .filter-actions button,
   .filter-actions .btn {
     font-size: 0.92rem;
@@ -385,7 +386,7 @@ html, body, button, select, input, label {
 
 .cart-drawer.open {
   right: 0;
-  box-shadow: -12px 0 48px rgba(0,0,0,0.18);
+  box-shadow: -12px 0 48px rgba(0, 0, 0, 0.18);
 }
 
 .cart-header {
@@ -481,6 +482,7 @@ html, body, button, select, input, label {
 /* --------------------
    Small helpers & buttons
    -------------------- */
+   .page-head-wrapper{
 .btn {
   background: #fff;
   border: 1px solid var(--card-border);
@@ -494,6 +496,8 @@ html, body, button, select, input, label {
   transition: var(--transition-base);
   position: relative;
 }
+   }
+
 
 .btn.primary {
   background: var(--accent-color);
@@ -507,7 +511,7 @@ html, body, button, select, input, label {
 }
 
 .filter-btn .filter-icon {
-  font-size: 1.2rem;
+  font-size: 1rem;
 }
 
 /* cart badge button */
@@ -533,7 +537,7 @@ html, body, button, select, input, label {
 
 .cart-badge-btn:hover {
   transform: scale(1.05);
-  box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
 }
 
 /* badge count */
@@ -547,7 +551,7 @@ html, body, button, select, input, label {
   padding: 4px 8px;
   font-size: 0.8rem;
   font-weight: 700;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
 }
 
 /* --------------------
@@ -672,14 +676,14 @@ input[type="checkbox"]:checked::after {
 /* focus states for accessibility */
 input[type="radio"]:focus,
 input[type="checkbox"]:focus {
-  box-shadow: 0 0 0 4px rgba(10,128,102,0.08);
+  box-shadow: 0 0 0 4px rgba(10, 128, 102, 0.08);
   outline: none;
   transform: translateY(-1px);
 }
 
 /* make the label clickable with some spacing */
-label > input[type="radio"],
-label > input[type="checkbox"] {
+label>input[type="radio"],
+label>input[type="checkbox"] {
   margin: 0;
 }
 
@@ -717,6 +721,7 @@ label > input[type="checkbox"] {
 
   .cards-parent {
     gap: 12px;
+    padding: 0.5rem;
   }
 
   .cart-drawer {
@@ -746,6 +751,7 @@ label > input[type="checkbox"] {
 .interactive {
   transition: transform 160ms ease, box-shadow 200ms ease;
 }
+
 .interactive:hover {
   transform: translateY(-4px);
   box-shadow: var(--elevation-1);
@@ -755,6 +761,7 @@ label > input[type="checkbox"] {
 .show-mobile {
   display: none;
 }
+
 @media (max-width: 699px) {
   .show-mobile {
     display: inline-block;
@@ -765,6 +772,7 @@ label > input[type="checkbox"] {
    Accessibility: reduced motion
    -------------------- */
 @media (prefers-reduced-motion: reduce) {
+
   .filter-panel,
   .cart-drawer,
   .details-overlay,
@@ -774,4 +782,27 @@ label > input[type="checkbox"] {
     transition: none !important;
     animation: none !important;
   }
+}
+
+.products-page-wrapper {
+  .page-head {
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: 12px;
+    flex-direction: column;
+
+    .filterBtn {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      position: relative;
+      left: 6px;
+      top: 67px;
+    }
+  }
+}
+.page-head-wrapper{
+  position:relative;
+  top:-80px;
 }
