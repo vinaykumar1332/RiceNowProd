@@ -1,0 +1,78 @@
+.notfound-container {
+  min-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  gap: 1rem;
+  padding: 2rem;
+  animation: fadeSlideIn 0.8s ease-out both;
+}
+
+.notfound-title {
+  font-size: 4rem;
+  font-weight: 800;
+  color: #222;
+  animation: bounce404 1.5s ease infinite;
+}
+
+.notfound-message {
+  font-size: 1.2rem;
+  color: #666;
+  max-width: 500px;
+  animation: fadeIn 1s ease 0.4s both;
+}
+
+.notfound-button {
+  margin-top: 1rem;
+  padding: 0.75rem 1.5rem;
+  background: #0aa77a;
+  color: #fff;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 600;
+  transition: background 0.2s ease, transform 0.15s ease;
+  animation: pulseBtn 2s ease-in-out infinite;
+}
+
+.notfound-button:hover {
+  background: #088c64;
+  transform: translateY(-2px);
+}
+
+/* -------- Animations -------- */
+
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes bounce404 {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes pulseBtn {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(10, 167, 122, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 0 12px rgba(10, 167, 122, 0);
+  }
+}

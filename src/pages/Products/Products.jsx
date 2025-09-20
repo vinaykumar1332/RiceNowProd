@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from "react";
-import PropTypes from 'prop-types';
+import PropTypes from "prop-types";
 import Cards from "./cards/cards"; // Adjust path if needed
 import "./Products.css";
 import { VITE_PRODUCTS_API } from "../../API"; // Adjust path if needed
@@ -9,48 +9,76 @@ const PRODUCTS_API = VITE_PRODUCTS_API;
 
 /* ---------- CartDrawer (unchanged behavior) ---------- */
 function CartDrawer({ open, onClose, items, onInc, onDec, onRemove }) {
-  const total = useMemo(() => items.reduce((s, i) => s + (Number(i.offer_price ?? i.price ?? 0) * i.qty), 0), [items]);
+  const total = useMemo(
+    () =>
+      items.reduce(
+        (s, i) => s + (Number(i.offer_price ?? i.price ?? 0) * (i.qty ?? 0)),
+        0
+      ),
+    [items]
+  );
+
   return (
     <aside className={`cart-drawer ${open ? "open" : ""}`} aria-hidden={!open}>
       <div className="cart-header">
         <h3>Your Cart</h3>
-        <button className="drawer-close" onClick={onClose} aria-label="Close cart">✕</button>
+        <button className="drawer-close" onClick={onClose} aria-label="Close cart">
+          ✕
+        </button>
       </div>
+
       <div className="cart-body">
         {items.length === 0 ? (
           <div className="cart-empty">No items added</div>
         ) : (
-          items.map((it) => (
-            <div className="cart-item" key={it.id ?? it.title}>
-              <div className="cart-item-left">
-                <div
-                  className="cart-thumb"
-                  style={{ backgroundImage: `url(${(it.images && it.images[0]) || it.image || ""})` }}
-                />
-                <div>
-                  <div className="cart-title">{it.title}</div>
-                  <div className="cart-meta">₹{Number(it.offer_price ?? it.price ?? 0).toFixed(2)} |{it.weight || "—"} | Qty: {it.qty}</div>
+          items.map((it, i) => {
+            // safe key: prefer id/sku/title, fallback to index
+            const cartKey = `${String(it.id ?? it.sku ?? it.title ?? "cart")}-${i}`;
+            return (
+              <div className="cart-item" key={cartKey}>
+                <div className="cart-item-left">
+                  <div
+                    className="cart-thumb"
+                    style={{
+                      backgroundImage: `url(${(it.images && it.images[0]) || it.image || ""})`,
+                    }}
+                  />
+                  <div>
+                    <div className="cart-title">{it.title}</div>
+                    <div className="cart-meta">
+                      ₹{Number(it.offer_price ?? it.price ?? 0).toFixed(2)} |
+                      {it.weight || "—"} | Qty: {it.qty}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="cart-actions">
+                  <button onClick={() => onDec(it)} aria-label="decrease">
+                    −
+                  </button>
+                  <span>{it.qty}</span>
+                  <button onClick={() => onInc(it)} aria-label="increase">
+                    +
+                  </button>
+                  <button className="remove" onClick={() => onRemove(it)} aria-label="remove">
+                    Remove
+                  </button>
                 </div>
               </div>
-              <div className="cart-actions">
-                <button onClick={() => onDec(it)} aria-label="decrease">−</button>
-                <span>{it.qty}</span>
-                <button onClick={() => onInc(it)} aria-label="increase">+</button>
-                <button className="remove" onClick={() => onRemove(it)} aria-label="remove">
-                  Remove
-                </button>
-              </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
+
       <div className="cart-footer">
         <div className="cart-total">
           Total: <strong>₹{total.toFixed(2)}</strong>
         </div>
         <div className="cart-actions-row">
           <button className="btn primary">Checkout</button>
-          <button className="btn" onClick={onClose}>Close</button>
+          <button className="btn" onClick={onClose}>
+            Close
+          </button>
         </div>
       </div>
     </aside>
@@ -66,18 +94,17 @@ CartDrawer.propTypes = {
   onRemove: PropTypes.func.isRequired,
 };
 
-/* ---------- FilterPanel updated to match your request ----------
-   - Brand: radio buttons (single select)
-   - Category: tags (chips, multi-select)
-   - Price ranges: checkboxes (same as before)
-   - Kgs: radio buttons (single select) */
+/* ---------- FilterPanel (same as before, kept for completeness) ---------- */
 function FilterPanel({ open, onClose, filters, current, setCurrent, onReset }) {
-  const priceRanges = useMemo(() => [
-    { label: "Under ₹100", min: 0, max: 100 },
-    { label: "₹100 - ₹500", min: 100, max: 500 },
-    { label: "₹500 - ₹1000", min: 500, max: 1000 },
-    { label: "Over ₹1000", min: 1000, max: Infinity },
-  ], []);
+  const priceRanges = useMemo(
+    () => [
+      { label: "Under ₹100", min: 0, max: 100 },
+      { label: "₹100 - ₹500", min: 100, max: 500 },
+      { label: "₹500 - ₹1000", min: 500, max: 1000 },
+      { label: "Over ₹1000", min: 1000, max: Infinity },
+    ],
+    []
+  );
 
   const brands = useMemo(() => Array.from(filters.brands || []), [filters.brands]);
   const kgOptions = useMemo(() => Array.from(filters.kgs || []), [filters.kgs]); // e.g. "250g", "500g", "1kg"
@@ -86,7 +113,9 @@ function FilterPanel({ open, onClose, filters, current, setCurrent, onReset }) {
     <div className={`filter-panel ${open ? "open" : ""}`} aria-hidden={!open}>
       <div className="filter-head">
         <h3>Filters</h3>
-        <button className="drawer-close" onClick={onClose}>✕</button>
+        <button className="drawer-close" onClick={onClose}>
+          ✕
+        </button>
       </div>
 
       <div className="filter-body">
@@ -104,7 +133,7 @@ function FilterPanel({ open, onClose, filters, current, setCurrent, onReset }) {
               All
             </label>
             {brands.map((b) => (
-              <label key={b}>
+              <label key={String(b)}>
                 <input
                   type="radio"
                   name="brand"
@@ -123,7 +152,7 @@ function FilterPanel({ open, onClose, filters, current, setCurrent, onReset }) {
           <div className="chips">
             {(filters.tags || []).map((tag) => (
               <button
-                key={tag}
+                key={String(tag)}
                 className={`chip ${current.tags?.includes(tag) ? "active" : ""}`}
                 onClick={() => {
                   setCurrent((c) => {
@@ -134,11 +163,12 @@ function FilterPanel({ open, onClose, filters, current, setCurrent, onReset }) {
                     return { ...c, tags: tgs };
                   });
                 }}
+                type="button"
               >
                 {tag}
               </button>
             ))}
-            {(filters.tags || []).length === 0 && (<div className="small-muted">No categories found</div>)}
+            {(filters.tags || []).length === 0 && <div className="small-muted">No categories found</div>}
           </div>
         </section>
 
@@ -182,7 +212,7 @@ function FilterPanel({ open, onClose, filters, current, setCurrent, onReset }) {
               All
             </label>
             {kgOptions.map((k) => (
-              <label key={k}>
+              <label key={String(k)}>
                 <input
                   type="radio"
                   name="kgs"
@@ -197,9 +227,14 @@ function FilterPanel({ open, onClose, filters, current, setCurrent, onReset }) {
           </div>
         </section>
 
+        {/* NOTE: filter-actions is positioned sticky in CSS; keep it inside filter-body for layout */}
         <div className="filter-actions">
-          <button className="btn primary" onClick={onClose}>Apply</button>
-          <button className="btn" onClick={onReset} style={{ marginLeft: 8 }}>Reset</button>
+          <button className="btn primary" onClick={onClose}>
+            Apply
+          </button>
+          <button className="btn" onClick={onReset}>
+            Reset
+          </button>
         </div>
       </div>
     </div>
@@ -219,25 +254,45 @@ FilterPanel.propTypes = {
   onReset: PropTypes.func.isRequired,
 };
 
-/* ---------- ProductDetailsOverlay (unchanged except safe displays) ---------- */
+/* ---------- ProductDetailsOverlay ---------- */
 function ProductDetailsOverlay({ product, onClose, onAdd, onRemove, qty }) {
   if (!product) return null;
   const { title, description, price, offer_price, images, image, weight, tags, tags_array, brand } = product;
-  const imageList = useMemo(() => Array.isArray(images) && images.length ? images : image ? [image] : [], [images, image]);
+  const imageList = useMemo(
+    () => (Array.isArray(images) && images.length ? images : image ? [image] : []),
+    [images, image]
+  );
   const tagList = useMemo(() => cleanTags(tags, tags_array), [tags, tags_array]);
+
   return (
     <div className="details-overlay open" onClick={onClose}>
       <div className="details-content" onClick={(e) => e.stopPropagation()}>
-        <button className="drawer-close" onClick={onClose}>✕</button>
+        <button className="drawer-close" onClick={onClose}>
+          ✕
+        </button>
+
         {imageList[0] && <img src={imageList[0]} alt={title} className="details-image" />}
+
         <h2>{title}</h2>
-        {brand && <p><strong>Brand:</strong> {brand}</p>}
+        {brand && (
+          <p>
+            <strong>Brand:</strong> {brand}
+          </p>
+        )}
         <p>{description}</p>
-        <p><strong>Price:</strong> ₹{offer_price ?? price}</p>
+        <p>
+          <strong>Price:</strong> ₹{offer_price ?? price}
+        </p>
         <p> {weight}</p>
+
         <div className="tags">
-          {tagList.map((t, i) => <span key={i} className="tag">{t}</span>)}
+          {tagList.map((t) => (
+            <span key={String(t)} className="tag">
+              {t}
+            </span>
+          ))}
         </div>
+
         <div className="qty-controls">
           {qty > 0 ? (
             <>
@@ -262,7 +317,7 @@ ProductDetailsOverlay.propTypes = {
   qty: PropTypes.number.isRequired,
 };
 
-/* ---------- Main Products component (updated filtering model) ---------- */
+/* ---------- Main Products component ---------- */
 export default function Products() {
   const [products, setProducts] = useState([]);
   const [raw, setRaw] = useState([]);
@@ -279,20 +334,23 @@ export default function Products() {
     maxPrice: 1000,
   });
   const [currentFilter, setCurrentFilter] = useState({
-    brand: null,        // single brand radio
-    kgs: null,          // single kgs radio
+    brand: null, // single brand radio
+    kgs: null, // single kgs radio
     maxPrice: 100000,
-    priceRanges: [],    // array of range labels
-    tags: [],           // multi-select (acts as category)
+    priceRanges: [], // array of range labels
+    tags: [], // multi-select (acts as category)
   });
   const [selectedProduct, setSelectedProduct] = useState(null);
 
-  const priceRanges = useMemo(() => [
-    { label: "Under ₹100", min: 0, max: 100 },
-    { label: "₹100 - ₹500", min: 100, max: 500 },
-    { label: "₹500 - ₹1000", min: 500, max: 1000 },
-    { label: "Over ₹1000", min: 1000, max: Infinity },
-  ], []);
+  const priceRanges = useMemo(
+    () => [
+      { label: "Under ₹100", min: 0, max: 100 },
+      { label: "₹100 - ₹500", min: 100, max: 500 },
+      { label: "₹500 - ₹1000", min: 500, max: 1000 },
+      { label: "Over ₹1000", min: 1000, max: Infinity },
+    ],
+    []
+  );
 
   const extractProducts = (data) => {
     if (Array.isArray(data)) return data;
@@ -301,6 +359,23 @@ export default function Products() {
     if (Array.isArray(data?.data)) return data.data;
     console.warn("Unexpected data shape from products API", data);
     return [];
+  };
+
+  // dedupe helper (best-effort)
+  const dedupeByKey = (rows) => {
+    const seen = new Set();
+    const out = [];
+    for (let i = 0; i < (rows || []).length; i++) {
+      const r = rows[i];
+      const key = String(r.id ?? r.sku ?? r.slug ?? r.title ?? JSON.stringify(r));
+      if (!seen.has(key)) {
+        seen.add(key);
+        out.push(r);
+      } else {
+        // optionally we could merge items here, but for now skip duplicates
+      }
+    }
+    return out;
   };
 
   // Build brands & weights & tags sets from rows
@@ -312,18 +387,16 @@ export default function Products() {
     let max = Number.NEGATIVE_INFINITY;
 
     rows.forEach((r) => {
-      // common brand keys: brand, manufacturer, mfg, vendor - try them
       const brand = r.brand ?? r.manufacturer ?? r.mfg ?? r.vendor ?? null;
       if (brand) brands.add(String(brand).trim());
 
-      // weight: keep raw string if present (normalization could be done as needed)
       const w = r.weight ?? r.weight_text ?? r.unit ?? null;
       if (w) {
         const ws = String(w).trim();
         if (ws) kgs.add(ws);
       }
 
-      cleanTags(r.tags, r.tags_array).forEach(t => tagsSet.add(t));
+      cleanTags(r.tags, r.tags_array).forEach((t) => tagsSet.add(t));
 
       const p = Number(r.offer_price ?? r.price ?? 0);
       if (!Number.isNaN(p)) {
@@ -349,6 +422,7 @@ export default function Products() {
       setLoading(false);
       return;
     }
+
     fetch(PRODUCTS_API, { method: "GET", mode: "cors", headers: { Accept: "application/json" }, credentials: "omit" })
       .then(async (res) => {
         if (!res.ok) {
@@ -359,10 +433,12 @@ export default function Products() {
       })
       .then((data) => {
         const rows = extractProducts(data);
-        setRaw(rows);
-        setProducts(rows);
+        const uniqueRows = dedupeByKey(rows);
 
-        const processed = processFilters(rows);
+        setRaw(uniqueRows);
+        setProducts(uniqueRows);
+
+        const processed = processFilters(uniqueRows);
         setFilters({
           brands: processed.brands,
           kgs: processed.kgs,
@@ -381,7 +457,10 @@ export default function Products() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { fetchProducts(); }, []);
+  useEffect(() => {
+    fetchProducts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Filtering effect: apply brand, price ranges, maxPrice, tags (category), and kgs
   useEffect(() => {
@@ -390,8 +469,8 @@ export default function Products() {
 
       // price range match if any selected
       if (currentFilter.priceRanges?.length > 0) {
-        const matchesRange = currentFilter.priceRanges.some(rangeLabel => {
-          const range = priceRanges.find(r => r.label === rangeLabel);
+        const matchesRange = currentFilter.priceRanges.some((rangeLabel) => {
+          const range = priceRanges.find((r) => r.label === rangeLabel);
           if (!range) return false;
           return pPrice >= range.min && (range.max === Infinity ? pPrice >= range.min : pPrice < range.max);
         });
@@ -414,7 +493,7 @@ export default function Products() {
       // tags (category) multi-select: product must contain at least one selected tag
       if (currentFilter.tags?.length > 0) {
         const pTags = cleanTags(p.tags, p.tags_array);
-        if (!currentFilter.tags.some(t => pTags.includes(t))) return false;
+        if (!currentFilter.tags.some((t) => pTags.includes(t))) return false;
       }
 
       return true;
@@ -423,20 +502,22 @@ export default function Products() {
     setProducts(filtered);
   }, [currentFilter, raw, priceRanges]);
 
-  /* ---------- Cart helpers (unchanged) ---------- */
+  /* ---------- Cart helpers ---------- */
   const addToCart = (product) => {
     if (!product) return;
-    // treat product as active if property 'active' or 'stock' equals 'active' (string) OR stock numeric > 0
-    const activeVal = (product.active ?? product.stock ?? "");
-    const isActive = (typeof activeVal === "string" && activeVal.toLowerCase() === "active")
-      || (typeof activeVal === "number" && activeVal > 0)
-      || activeVal === true;
+    const activeVal = product.active ?? product.stock ?? "";
+    const isActive =
+      (typeof activeVal === "string" && activeVal.toLowerCase() === "active") ||
+      (typeof activeVal === "number" && activeVal > 0) ||
+      activeVal === true;
+
     if (!isActive) return;
+
     setCart((prev) => {
       const foundIndex = prev.findIndex((i) => (i.id ?? i.title) === (product.id ?? product.title));
       if (foundIndex > -1) {
         const newCart = [...prev];
-        newCart[foundIndex] = { ...newCart[foundIndex], qty: newCart[foundIndex].qty + 1 };
+        newCart[foundIndex] = { ...newCart[foundIndex], qty: (newCart[foundIndex].qty ?? 0) + 1 };
         return newCart;
       }
       return [{ ...product, qty: 1 }, ...prev];
@@ -448,11 +529,11 @@ export default function Products() {
       const foundIndex = prev.findIndex((i) => (i.id ?? i.title) === (product.id ?? product.title));
       if (foundIndex === -1) return prev;
       const newCart = [...prev];
-      if (newCart[foundIndex].qty <= 1) {
+      if ((newCart[foundIndex].qty ?? 0) <= 1) {
         newCart.splice(foundIndex, 1);
         return newCart;
       }
-      newCart[foundIndex] = { ...newCart[foundIndex], qty: newCart[foundIndex].qty - 1 };
+      newCart[foundIndex] = { ...newCart[foundIndex], qty: (newCart[foundIndex].qty ?? 0) - 1 };
       return newCart;
     });
   };
@@ -467,7 +548,7 @@ export default function Products() {
     return map;
   }, [cart]);
 
-  const totalCartItems = useMemo(() => cart.reduce((s, i) => s + i.qty, 0), [cart]);
+  const totalCartItems = useMemo(() => cart.reduce((s, i) => s + (i.qty ?? 0), 0), [cart]);
 
   const resetFilters = () => {
     setCurrentFilter({
@@ -481,8 +562,11 @@ export default function Products() {
 
   /* ---------- Render ---------- */
   return (
-    <div className="page products-page-wrapper" >
-      <div className="page-head" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+    <div className="page products-page-wrapper">
+      <div
+        className="page-head"
+        style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}
+      >
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <button className="btn filter-btn" onClick={() => setFilterOpen((f) => !f)} aria-expanded={filterOpen}>
             <i className="filter-icon">≡</i> Filters
@@ -495,11 +579,11 @@ export default function Products() {
           <div className="cards-parent" aria-busy="true">
             {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="card skeleton">
-                <div className="card-media skel-media"></div>
+                <div className="card-media skel-media" />
                 <div className="card-body">
-                  <div className="skel-line medium"></div>
-                  <div className="skel-line short"></div>
-                  <div className="skel-line"></div>
+                  <div className="skel-line medium" />
+                  <div className="skel-line short" />
+                  <div className="skel-line" />
                 </div>
               </div>
             ))}
@@ -510,7 +594,9 @@ export default function Products() {
           <div style={{ padding: 16, background: "#fff6f6", borderRadius: 8 }}>
             <div style={{ color: "#b33", fontWeight: 700 }}>Error: {error}</div>
             <div style={{ marginTop: 8 }}>
-              <button className="btn primary" onClick={fetchProducts}>Try again</button>
+              <button className="btn primary" onClick={fetchProducts}>
+                Try again
+              </button>
             </div>
           </div>
         )}
@@ -524,16 +610,21 @@ export default function Products() {
         {!loading && !error && products.length > 0 && (
           <div className="products-section-wrapper" style={{ marginTop: 12 }}>
             <div className="cards-parent">
-              {products.map((p, idx) => (
-                <Cards
-                  key={p.id ?? p.title ?? idx}
-                  product={p}
-                  onAdd={addToCart}
-                  onRemove={removeOne}
-                  qty={cartQtyMap.get(p.id ?? p.title) ?? 0}
-                  onOpenDetails={() => setSelectedProduct(p)}
-                />
-              ))}
+              {products.map((p, idx) => {
+                // stable key: prefer id/sku/slug/title and append index to guarantee uniqueness
+                const base = String(p.id ?? p.sku ?? p.slug ?? p.title ?? "product");
+                const stableKey = `${base}-${idx}`;
+                return (
+                  <Cards
+                    key={stableKey}
+                    product={p}
+                    onAdd={addToCart}
+                    onRemove={removeOne}
+                    qty={cartQtyMap.get(p.id ?? p.title) ?? 0}
+                    onOpenDetails={() => setSelectedProduct(p)}
+                  />
+                );
+              })}
             </div>
           </div>
         )}
@@ -548,7 +639,14 @@ export default function Products() {
         onReset={resetFilters}
       />
 
-      <CartDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} items={cart} onInc={addToCart} onDec={removeOne} onRemove={removeAll} />
+      <CartDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        items={cart}
+        onInc={addToCart}
+        onDec={removeOne}
+        onRemove={removeAll}
+      />
 
       <button className="cart-badge-btn" onClick={() => setDrawerOpen(true)} aria-label="Open cart">
         <i className="cart-icon">🛒</i>
