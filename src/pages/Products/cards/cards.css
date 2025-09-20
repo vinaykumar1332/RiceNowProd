@@ -290,7 +290,7 @@
     }
 
     .orig {
-      font-size: var(--font-size-small);
+      font-size: 10px;
       color: var(--text-muted);
       text-decoration: line-through;
     }
