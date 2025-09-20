@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import PropTypes from 'prop-types';
 import "./cards.css";
 import { cleanTags } from "../../../utils/helpers"; // Adjust path if needed
@@ -10,6 +10,8 @@ const MemoizedCards = React.memo(function Cards({
   qty = 0,
   onOpenDetails = () => {}
 }) {
+  const [expanded, setExpanded] = useState(false); // local overlay state
+
   const {
     title = "Untitled product",
     description = "No description.",
@@ -25,10 +27,32 @@ const MemoizedCards = React.memo(function Cards({
     active,
     category = "Unknown",
   } = product;
-  const imageList = useMemo(() => Array.isArray(images) && images.length ? images : image ? [image] : [], [images, image]);
+
+  const imageList = useMemo(
+    () => (Array.isArray(images) && images.length ? images : image ? [image] : []),
+    [images, image]
+  );
   const tagList = useMemo(() => cleanTags(tags, tags_array), [tags, tags_array]);
   const isActive = String(active ?? stock ?? "").toLowerCase() === "active";
   const displayWeight = weight || (Array.isArray(weights) ? weights.join(", ") : "—");
+
+  // compute percent off if both present and numeric
+  const percentOff = useMemo(() => {
+    const p = Number(price);
+    const o = Number(offer_price ?? price);
+    if (!p || !o || p <= 0 || o >= p) return null;
+    return Math.round(((p - o) / p) * 100);
+  }, [price, offer_price]);
+
+  const handleOpenOverlay = (evt) => {
+    evt?.stopPropagation();
+    setExpanded(true);
+  };
+
+  const handleCloseOverlay = (evt) => {
+    evt?.stopPropagation();
+    setExpanded(false);
+  };
 
   return (
     <article className={`card ${isActive ? "card-active" : "card-inactive"}`} aria-hidden={!isActive}>
@@ -40,14 +64,24 @@ const MemoizedCards = React.memo(function Cards({
               alt={title}
               loading="lazy"
               onError={(e) => {
-                e.currentTarget.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='400'><rect width='100%' height='100%' fill='%23f0f0f0'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%23999' font-size='18'>Image not available</text></svg>";
+                e.currentTarget.src =
+                  "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='400'><rect width='100%' height='100%' fill='%23f0f0f0'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%23999' font-size='18'>Image not available</text></svg>";
               }}
             />
           ) : (
             <div className="image-placeholder">No image</div>
           )}
+
+          {/* Offer badge (top-right) */}
+          {percentOff ? (
+            <div className="offer-badge offer-badge-right" aria-hidden={false}>
+              <div className="offer-percentage">{percentOff}%</div>
+              <div className="offer-text">OFF</div>
+            </div>
+          ) : null}
         </div>
       </div>
+
       <div className="card-body">
         <div className="card-head">
           <h3 className="card-title">{title}</h3>
@@ -55,14 +89,18 @@ const MemoizedCards = React.memo(function Cards({
             <span className="category">{category}</span>
           </div>
         </div>
+
         <p className="desc">{description}</p>
+
         <div className="price-row">
           {offer_price ? <span className="offer">₹{Number(offer_price || price || 0).toFixed(2)}</span> : null}
           {price && String(price) !== String(offer_price) ? <span className="orig">₹{Number(price).toFixed(2)}</span> : null}
         </div>
+
         <div className="info-row">
           <div><strong>Weight:</strong> {displayWeight}</div>
         </div>
+
         <div className="tags-row">
           {tagList.length ? (
             <div className="tags">
@@ -79,6 +117,7 @@ const MemoizedCards = React.memo(function Cards({
             </div>
           )}
         </div>
+
         <div className="card-actions">
           <div className="qty-controls" aria-hidden={!isActive}>
             {qty > 0 ? (
@@ -91,11 +130,62 @@ const MemoizedCards = React.memo(function Cards({
               <button className="add-btn" onClick={() => onAdd(product)} disabled={!isActive} aria-label={`Add ${title} to cart`}>＋ Add</button>
             )}
           </div>
-          <button className="details-btn" onClick={() => onOpenDetails(product)} aria-label={`Open ${title} details`}>
+
+          <button className="details-btn" onClick={(e) => { onOpenDetails(product); handleOpenOverlay(e); }} aria-expanded={expanded} aria-controls="details-panel">
             Details
           </button>
         </div>
       </div>
+
+      {/* Details overlay inside the card */}
+      {expanded && (
+        <div className="details-overlay" role="dialog" aria-modal="true" id="details-panel" onClick={handleCloseOverlay}>
+          <div className="details-panel" onClick={(e) => e.stopPropagation()}>
+            <button className="details-close" onClick={handleCloseOverlay} aria-label="Close details">✕</button>
+            <div className="details-inner">
+              <div className="details-header">
+                <h4>{title}</h4>
+                {percentOff && <div className="overlay-badge">{percentOff}% OFF</div>}
+              </div>
+              <div className="details-body">
+                <div className="details-image-wrap">
+                  {imageList.length ? <img src={imageList[0]} alt={title} /> : <div className="image-placeholder">No image</div>}
+                </div>
+                <div className="details-text">
+                  <p className="full-desc">{description}</p>
+                  <div className="details-meta">
+                    <div><strong>Category:</strong> {category}</div>
+                    <div><strong>Weight:</strong> {displayWeight}</div>
+                    <div className="price-block">
+                      {offer_price ? <div className="offer-large">₹{Number(offer_price).toFixed(2)}</div> : null}
+                      {price && String(price) !== String(offer_price) ? <div className="orig-large">₹{Number(price).toFixed(2)}</div> : null}
+                    </div>
+                    <div className="tag-list">
+                      {tagList.map((t, idx) => <span key={idx} className="tag">{t}</span>)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="details-footer">
+                <div className="qty-controls">
+                  {qty > 0 ? (
+                    <>
+                      <button className="qty-btn" onClick={() => onRemove(product)} aria-label={`Decrease ${title}`}>−</button>
+                      <span className="qty">{qty}</span>
+                      <button className="qty-btn" onClick={() => onAdd(product)} aria-label={`Increase ${title}`}>+</button>
+                    </>
+                  ) : (
+                    <button className="add-btn" onClick={() => onAdd(product)} aria-label={`Add ${title} to cart`}>＋ Add</button>
+                  )}
+                </div>
+
+                <button className="close-secondary" onClick={handleCloseOverlay} aria-label="Close details">Close</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </article>
   );
 });

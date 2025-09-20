@@ -1,6 +1,11 @@
-/* ProductsPage.css - Enhanced responsive product page styles with improved filter panel alignment */
+/* ProductsPage.css
+   Complete version — improved button alignment, tags, close button, footer actions sticky,
+   animations, fonts, custom radio/checkbox, and responsive tweaks.
+*/
 
-/* Define reusable CSS variables for consistency */
+/* --------------------
+   Variables & base
+   -------------------- */
 :root {
   --border-radius: 8px;
   --gap: 1rem;
@@ -13,19 +18,47 @@
   --card-border: rgba(0, 0, 0, 0.06);
   --button-border: #cccccc;
   --brand-primary: #0a7;
+
+  --font-family: "Inter", "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-size-base: 0.95rem;
+  --font-size-small: 0.85rem;
+  --transition-fast: all 0.16s ease-in-out;
+  --transition-smooth: all 0.28s cubic-bezier(0.25, 0.8, 0.25, 1);
+  --elevation-1: 0 4px 12px rgba(0,0,0,0.06);
+  --elevation-2: 0 8px 28px rgba(0,0,0,0.09);
+  --filter-footer-height: 68px; /* used to ensure content doesn't hide under the sticky footer */
 }
 
+/* apply font & smoothing globally */
+html, body, button, select, input, label {
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: var(--text-primary);
+  line-height: 1.35;
+}
+
+/* page wrapper */
 .page.products-page-wrapper {
   padding: 1rem;
+  background: #fff;
+  min-height: 100vh;
 }
 
+/* --------------------
+   Grid / Cards
+   -------------------- */
 .cards-parent {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
   gap: 20px;
+  align-items: start;
 }
 
-/* Filter panel */
+/* --------------------
+   Filter panel (drawer)
+   -------------------- */
 .filter-panel {
   position: fixed;
   left: 0;
@@ -36,18 +69,23 @@
   background: #fff;
   box-shadow: 12px 0 40px rgba(10, 10, 10, 0.12);
   transform: translateX(-100%);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease-in-out;
   z-index: 900;
-  overflow: auto;
   display: flex;
   flex-direction: column;
+  border-right: 1px solid var(--card-border);
+  will-change: transform;
+  -webkit-overflow-scrolling: touch;
+  /* ensure there's bottom padding so sticky footer doesn't overlap visual edge */
+  padding-bottom: 0;
 }
 
 .filter-panel.open {
   transform: translateX(0);
+  box-shadow: 12px 0 40px rgba(0,0,0,0.18);
 }
 
-/* Filter header */
+/* filter head (title + close) */
 .filter-head {
   display: flex;
   justify-content: space-between;
@@ -56,79 +94,132 @@
   border-bottom: 1px solid var(--card-border);
   background: var(--bg-light);
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-primary);
+  gap: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 12; /* sit above the scrolling body */
 }
 
-/* Filter body */
+/* modern floating close button */
+.drawer-close {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 1.3rem;
+  color: var(--text-muted);
+  transition: var(--transition-smooth);
+  padding: 6px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* hover/active for close */
+.drawer-close:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--accent-color);
+  transform: rotate(90deg) scale(1.12);
+  box-shadow: var(--elevation-1);
+}
+
+/* --------------------
+   Filter body & sections
+   --------------------
+   NOTE: filter-body scrolls independently; .filter-actions is sticky at bottom
+   -------------------- */
 .filter-body {
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 24px;
-  flex: 1;
+  /* make the body scrollable within the fixed height of the panel */
+  overflow: auto;
+  flex: 1 1 auto;
+  /* add bottom padding to avoid content being hidden under sticky footer */
+  padding-bottom: calc(var(--filter-footer-height) + 20px);
 }
 
-/* Filter section */
+/* filter sections */
 .filter-body section {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.filter-body section h3 {
+.filter-body section h3,
+.filter-body section h4 {
   font-size: 0.95rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-primary);
   margin: 0;
   padding-bottom: 8px;
   border-bottom: 1px solid var(--card-border);
 }
 
-/* Filter select */
+/* selects */
 .filter-body select {
   padding: 10px;
   border: 1px solid var(--card-border);
   border-radius: var(--border-radius);
-  font-size: 0.9rem;
+  font-size: var(--font-size-base);
   color: var(--text-primary);
   background: #fff;
   transition: var(--transition-base);
   cursor: pointer;
+  outline: none;
 }
 
-.filter-body select:hover {
+.filter-body select:hover,
+.filter-body select:focus {
   border-color: var(--accent-color);
+  box-shadow: 0 4px 10px rgba(10, 128, 102, 0.04);
 }
 
-/* Price checkboxes */
+/* --------------------
+   Price checkboxes & brand/kg sections
+   -------------------- */
 .price-checkboxes {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.price-checkboxes label {
+.price-checkboxes label,
+.brand-radios label,
+.kg-radios label {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 0.9rem;
+  gap: 12px;
+  font-size: var(--font-size-small);
   color: var(--text-secondary);
   cursor: pointer;
-  transition: color var(--transition-base);
+  transition: color var(--transition-base), transform var(--transition-fast);
+  user-select: none;
 }
 
-.price-checkboxes label:hover {
+.price-checkboxes label:hover,
+.brand-radios label:hover,
+.kg-radios label:hover {
   color: var(--text-primary);
+  transform: translateX(2px);
 }
 
-.price-checkboxes input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
+/* make inputs visually consistent but custom styled below */
+.price-checkboxes input[type="checkbox"],
+.brand-radios input[type="radio"],
+.kg-radios input[type="radio"] {
+  width: 18px;
+  height: 18px;
   cursor: pointer;
+  flex: 0 0 18px;
+  outline: none;
+  display: inline-block;
 }
 
-/* Brand and kg filter sections */
+/* brand & kg containers */
 .filter-section-brand,
 .filter-section-kg {
   display: flex;
@@ -143,30 +234,9 @@
   gap: 10px;
 }
 
-.brand-radios label,
-.kg-radios label {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: color var(--transition-base);
-}
-
-.brand-radios label:hover,
-.kg-radios label:hover {
-  color: var(--text-primary);
-}
-
-.brand-radios input[type="radio"],
-.kg-radios input[type="radio"] {
-  width: 16px;
-  height: 16px;
-  cursor: pointer;
-}
-
-/* Chips */
+/* --------------------
+   Chips / tags
+   -------------------- */
 .chips {
   display: flex;
   gap: 8px;
@@ -175,86 +245,127 @@
 }
 
 .chip {
-  padding: 8px 12px;
+  padding: 6px 12px;
   border-radius: 999px;
   border: 1px solid var(--card-border);
   background: #fff;
-  font-size: 0.85rem;
+  font-size: var(--font-size-small);
   color: var(--text-secondary);
   cursor: pointer;
-  transition: var(--transition-base), transform 0.2s ease;
+  transition: var(--transition-smooth);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  user-select: none;
 }
 
 .chip:hover {
   border-color: var(--accent-color);
+  background: #f8fefb;
   color: var(--text-primary);
-  transform: scale(1.05);
+  transform: translateY(-2px);
 }
 
 .chip.active {
   background: var(--accent-color);
   color: #fff;
   border-color: var(--accent-color);
+  box-shadow: 0 6px 18px rgba(0,128,102,0.18);
+  transform: translateY(-2px);
 }
 
-/* Filter actions */
+/* --------------------
+   Filter actions (footer) — STICKY and side-by-side
+   -------------------- */
 .filter-actions {
+  /* Sticky footer positioned at bottom of the filter panel */
+  position: sticky;
+  bottom: 0;
+  z-index: 14; /* above the body but below header if needed */
   display: flex;
   justify-content: space-between;
   gap: 12px;
   padding: 12px 16px;
   border-top: 1px solid var(--card-border);
-  background: var(--bg-light);
+  background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,255,255,1));
+  backdrop-filter: blur(4px);
+  align-items: center;
+  /* ensure the footer has explicit height so we can add bottom padding to the scrolling body */
+  min-height: var(--filter-footer-height);
+  box-shadow: 0 -6px 18px rgba(0,0,0,0.04);
 }
 
-.filter-actions button {
+/* make both buttons flex:1 and consistent heights */
+.filter-actions button,
+.filter-actions .btn,
+.filter-actions .apply,
+.filter-actions .clear {
+  flex: 1;
   padding: 10px 16px;
   border-radius: var(--border-radius);
-  font-size: 0.9rem;
-  font-weight: 600;
+  font-size: var(--font-size-base);
+  font-weight: 700;
   cursor: pointer;
-  transition: var(--transition-base), transform 0.2s ease;
+  transition: var(--transition-smooth);
+  letter-spacing: 0.2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
 }
 
-.filter-actions button:first-child {
-  background: var(--accent-color);
+/* primary (apply) */
+.filter-actions button.apply,
+.filter-actions button:first-child,
+.filter-actions .btn.primary {
+  background: linear-gradient(135deg, var(--accent-color), #009977);
   color: #fff;
   border: none;
+  box-shadow: 0 6px 18px rgba(0,128,102,0.12);
 }
 
-.filter-actions button:first-child:hover {
-  background: #008966;
-  transform: scale(1.05);
+.filter-actions button.apply:hover,
+.filter-actions button:first-child:hover,
+.filter-actions .btn.primary:hover {
+  background: linear-gradient(135deg, #009977, var(--accent-color));
+  transform: translateY(-3px);
+  box-shadow: var(--elevation-2);
 }
 
-.filter-actions button:last-child {
+/* secondary (clear) */
+.filter-actions button.clear,
+.filter-actions button:last-child,
+.filter-actions .btn {
   background: transparent;
   border: 1px solid var(--button-border);
   color: var(--text-secondary);
 }
 
-.filter-actions button:last-child:hover {
+.filter-actions button.clear:hover,
+.filter-actions button:last-child:hover,
+.filter-actions .btn:hover {
   border-color: var(--accent-color);
-  color: var(--text-primary);
-  transform: scale(1.05);
+  color: var(--accent-color);
+  background: #f7fcfa;
+  transform: translateY(-3px);
 }
 
-/* Drawer close button */
-.drawer-close {
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  font-size: 1.2rem;
-  color: var(--text-muted);
-  transition: color var(--transition-base), transform 0.2s ease;
+/* ensure side-by-side on small screens: slightly reduce gaps and keep them side-by-side */
+@media (max-width: 520px) {
+  .filter-actions {
+    gap: 8px;
+    padding: 10px 12px;
+    min-height: 62px;
+  }
+  .filter-actions button,
+  .filter-actions .btn {
+    font-size: 0.92rem;
+    padding: 8px 10px;
+  }
 }
 
-.drawer-close:hover {
-  color: var(--text-primary);
-  transform: scale(1.1);
-}
-
-/* Cart drawer styles */
+/* --------------------
+   Cart drawer styles (kept & enhanced)
+   -------------------- */
 .cart-drawer {
   position: fixed;
   right: -420px;
@@ -264,14 +375,17 @@
   max-width: 95%;
   background: #fff;
   box-shadow: -12px 0 40px rgba(12, 12, 12, 0.12);
-  transition: right 0.22s cubic-bezier(0.2, 0.9, 0.2, 1);
+  transition: right 0.28s cubic-bezier(0.2, 0.9, 0.2, 1), box-shadow 0.28s;
   z-index: 1000;
   display: flex;
   flex-direction: column;
+  border-left: 1px solid var(--card-border);
+  will-change: right;
 }
 
 .cart-drawer.open {
   right: 0;
+  box-shadow: -12px 0 48px rgba(0,0,0,0.18);
 }
 
 .cart-header {
@@ -281,6 +395,7 @@
   padding: 12px 14px;
   border-bottom: 1px solid var(--card-border);
   background: var(--bg-light);
+  font-weight: 700;
 }
 
 .cart-body {
@@ -300,6 +415,7 @@
   gap: 8px;
 }
 
+/* cart items */
 .cart-item {
   display: flex;
   align-items: center;
@@ -324,6 +440,7 @@
   background-position: center;
   border-radius: 6px;
   background-color: #f2f2f2;
+  flex-shrink: 0;
 }
 
 .cart-actions {
@@ -338,6 +455,9 @@
   border: 1px solid var(--card-border);
   background: #fff;
   transition: var(--transition-base);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .cart-actions .remove {
@@ -350,6 +470,7 @@
   background: #d32f2f;
 }
 
+/* empty state */
 .cart-empty {
   color: var(--text-muted);
   padding: 18px 0;
@@ -357,20 +478,21 @@
   font-size: 0.9rem;
 }
 
-/* Small helpers */
+/* --------------------
+   Small helpers & buttons
+   -------------------- */
 .btn {
   background: #fff;
   border: 1px solid var(--card-border);
   padding: 8px 12px;
   border-radius: var(--border-radius);
   cursor: pointer;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
   font-size: 0.9rem;
   transition: var(--transition-base);
   position: relative;
-  left:15px;
 }
 
 .btn.primary {
@@ -381,13 +503,14 @@
 
 .btn.primary:hover {
   background: #008966;
+  transform: translateY(-2px);
 }
 
 .filter-btn .filter-icon {
   font-size: 1.2rem;
 }
 
-/* Cart badge button */
+/* cart badge button */
 .cart-badge-btn {
   position: fixed;
   bottom: 20px;
@@ -405,13 +528,15 @@
   cursor: pointer;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   transition: transform 0.2s, box-shadow 0.2s;
+  z-index: 1200;
 }
 
 .cart-badge-btn:hover {
   transform: scale(1.05);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.25);
 }
 
+/* badge count */
 .badge {
   position: absolute;
   top: -8px;
@@ -421,10 +546,13 @@
   border-radius: 50%;
   padding: 4px 8px;
   font-size: 0.8rem;
-  font-weight: bold;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
 }
 
-/* Details overlay */
+/* --------------------
+   Details overlay (modal)
+   -------------------- */
 .details-overlay {
   position: fixed;
   top: 0;
@@ -438,7 +566,7 @@
   z-index: 1100;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.3s;
+  transition: opacity 0.3s ease;
 }
 
 .details-overlay.open {
@@ -455,6 +583,7 @@
   max-height: 80vh;
   overflow: auto;
   position: relative;
+  box-shadow: var(--elevation-2);
 }
 
 .details-image {
@@ -481,11 +610,87 @@
   border-radius: var(--border-radius);
 }
 
-/* Responsive adjustments */
+/* --------------------
+   Custom radio & checkbox (accessible visual styling)
+   -------------------- */
+/* visually hide native appearance but keep keyboard focus and accessibility */
+input[type="radio"],
+input[type="checkbox"] {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--card-border);
+  background: #fff;
+  border-radius: 6px;
+  cursor: pointer;
+  position: relative;
+  display: inline-block;
+  vertical-align: middle;
+  transition: border-color 0.18s ease, background 0.18s ease, transform 0.12s ease;
+}
+
+/* radio specific: round */
+input[type="radio"] {
+  border-radius: 50%;
+}
+
+/* checked states */
+input[type="radio"]:checked,
+input[type="checkbox"]:checked {
+  border-color: var(--accent-color);
+  background: var(--accent-color);
+}
+
+/* radio inner dot */
+input[type="radio"]:checked::after {
+  content: "";
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fff;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* checkbox tick */
+input[type="checkbox"]:checked::after {
+  content: "✔";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.78rem;
+  color: #fff;
+  line-height: 1;
+  font-weight: 700;
+}
+
+/* focus states for accessibility */
+input[type="radio"]:focus,
+input[type="checkbox"]:focus {
+  box-shadow: 0 0 0 4px rgba(10,128,102,0.08);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+/* make the label clickable with some spacing */
+label > input[type="radio"],
+label > input[type="checkbox"] {
+  margin: 0;
+}
+
+/* --------------------
+   Responsive adjustments
+   -------------------- */
 @media (max-width: 699px) {
   .filter-panel {
     width: 90%;
-    max-width: 300px;
+    max-width: 320px;
+    top: 60px;
   }
 
   .filter-body {
@@ -497,14 +702,76 @@
     padding: 10px 12px;
   }
 
+  /* keep filter action buttons side-by-side on mobile (two columns) */
   .filter-actions {
+    flex-wrap: nowrap;
+    gap: 8px;
     padding: 10px 12px;
-    flex-direction: column;
-    gap: 10px;
+    min-height: 62px;
   }
 
   .filter-actions button {
-    width: 100%;
-    text-align: center;
+    font-size: 0.92rem;
+    padding: 10px 12px;
+  }
+
+  .cards-parent {
+    gap: 12px;
+  }
+
+  .cart-drawer {
+    width: 95%;
+    right: -100%;
+  }
+
+  .cart-drawer.open {
+    right: 0;
+    z-index: 9999;
+  }
+}
+
+/* --------------------
+   Small helpers / micro-UX
+   -------------------- */
+.text-muted {
+  color: var(--text-muted);
+}
+
+.small {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+/* subtle elevation for interactive containers */
+.interactive {
+  transition: transform 160ms ease, box-shadow 200ms ease;
+}
+.interactive:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--elevation-1);
+}
+
+/* utility for hidden on desktop but visible on mobile */
+.show-mobile {
+  display: none;
+}
+@media (max-width: 699px) {
+  .show-mobile {
+    display: inline-block;
+  }
+}
+
+/* --------------------
+   Accessibility: reduced motion
+   -------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .filter-panel,
+  .cart-drawer,
+  .details-overlay,
+  .filter-actions button,
+  .chip,
+  .cart-badge-btn {
+    transition: none !important;
+    animation: none !important;
   }
 }
