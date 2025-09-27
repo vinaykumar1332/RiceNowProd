@@ -386,6 +386,8 @@
       border: 1px solid #444444;
       background: var(--card-bg);
       font-size: 1.25rem;
+      display: flex;
+      align-items: center;
       cursor: pointer;
       transition: var(--transition-fast), transform 0.1s ease;
 

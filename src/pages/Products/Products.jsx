@@ -1,17 +1,37 @@
-import React, { useEffect, useState, useMemo } from "react";
+// src/components/Products/Products.jsx
+import React, { useEffect, useMemo, useState } from "react";
 import PropTypes from "prop-types";
-import Cards from "./cards/cards"; // Adjust path if needed
+import { useNavigate } from "react-router-dom";
+import Cards from "./cards/cards";
 import "./Products.css";
 import { FaFilter } from "react-icons/fa6";
-import Search from "./Search/Search"; // adjust path
-import { VITE_PRODUCTS_API } from "../../API"; // Adjust path if needed
-import { cleanTags } from "../../utils/helpers"; // Adjust path if needed
+import { FaShoppingCart,FaTrash } from "react-icons/fa";
+import Search from "./Search/Search";
+import { VITE_PRODUCTS_API } from "../../API";
+import { MdOutlineShoppingCartCheckout } from "react-icons/md";
+import { cleanTags } from "../../utils/helpers";
 
 
 const PRODUCTS_API = VITE_PRODUCTS_API;
 
-/* ---------- CartDrawer (unchanged behavior) ---------- */
-function CartDrawer({ open, onClose, items, onInc, onDec, onRemove }) {
+/* -----------------------
+   Tiny cookie helper (client-side only)
+   Note: cookies set this way are NOT HttpOnly or secure by default.
+   Use server-side sessions for secure, tamper resistant storage.
+   ----------------------- */
+function setCookie(name, value, days = 1) {
+  try {
+    const d = new Date();
+    d.setTime(d.getTime() + days * 24 * 60 * 60 * 1000);
+    const expires = "expires=" + d.toUTCString();
+    document.cookie = `${name}=${encodeURIComponent(value)};${expires};path=/`;
+  } catch (e) {
+    // ignore cookie failures
+  }
+}
+
+/* ---------- CartDrawer ---------- */
+function CartDrawer({ open, onClose, items, onInc, onDec, onRemove, onCheckout }) {
   const total = useMemo(
     () =>
       items.reduce(
@@ -22,10 +42,20 @@ function CartDrawer({ open, onClose, items, onInc, onDec, onRemove }) {
   );
 
   return (
-    <aside className={`cart-drawer ${open ? "open" : ""}`} aria-hidden={!open}>
+    <aside
+      className={`cart-drawer ${open ? "open" : ""}`}
+      aria-hidden={!open}
+      role="dialog"
+      aria-label="Shopping cart"
+    >
       <div className="cart-header">
-        <h3>Your Cart</h3>
-        <button className="drawer-close" onClick={onClose} aria-label="Close cart">
+        <h3 className="cart-title">Your Cart</h3>
+        <button
+          type="button"
+          className="drawer-close"
+          onClick={onClose}
+          aria-label="Close cart"
+        >
           ✕
         </button>
       </div>
@@ -44,26 +74,32 @@ function CartDrawer({ open, onClose, items, onInc, onDec, onRemove }) {
                     style={{
                       backgroundImage: `url(${(it.images && it.images[0]) || it.image || ""})`,
                     }}
+                    role="img"
+                    aria-label={it.title}
                   />
-                  <div>
+                  <div className="cart-item-meta">
                     <div className="cart-title">{it.title}</div>
                     <div className="cart-meta">
-                      ₹{Number(it.offer_price ?? it.price ?? 0).toFixed(2)} |
-                      {it.weight || "—"} | Qty: {it.qty}
+                      ₹{Number(it.offer_price ?? it.price ?? 0).toFixed(2)} • {it.weight || "—"} • Qty: {it.qty}
                     </div>
                   </div>
                 </div>
 
                 <div className="cart-actions">
-                  <button onClick={() => onDec(it)} aria-label="decrease">
+                  <button type="button" className="btn" onClick={() => onDec(it)} aria-label="decrease">
                     −
                   </button>
-                  <span>{it.qty}</span>
-                  <button onClick={() => onInc(it)} aria-label="increase">
+                  <span aria-live="polite" aria-atomic="true">{it.qty}</span>
+                  <button type="button" className="btn" onClick={() => onInc(it)} aria-label="increase">
                     +
                   </button>
-                  <button className="remove" onClick={() => onRemove(it)} aria-label="remove">
-                    Remove
+                  <button
+                    type="button"
+                    className="remove"
+                    onClick={() => onRemove(it)}
+                    aria-label="remove"
+                  >
+                    <FaTrash />
                   </button>
                 </div>
               </div>
@@ -77,9 +113,18 @@ function CartDrawer({ open, onClose, items, onInc, onDec, onRemove }) {
           Total: <strong>₹{total.toFixed(2)}</strong>
         </div>
         <div className="cart-actions-row">
-          <button className="btn primary">Checkout</button>
-          <button className="btn" onClick={onClose}>
-            Close
+          <button
+            type="button"
+            title="proceed to checkout"
+            className="btn primary checkout"
+            aria-label="Checkout"
+            onClick={() => onCheckout && onCheckout()}
+            disabled={items.length === 0}
+          >
+            Checkout <MdOutlineShoppingCartCheckout />
+          </button>
+          <button type="button" className="btn cancel" onClick={onClose} aria-label="Close cart">
+            Cancel
           </button>
         </div>
       </div>
@@ -94,9 +139,10 @@ CartDrawer.propTypes = {
   onInc: PropTypes.func.isRequired,
   onDec: PropTypes.func.isRequired,
   onRemove: PropTypes.func.isRequired,
+  onCheckout: PropTypes.func,
 };
 
-/* ---------- FilterPanel (unchanged structure, uses filters.tags as categories) ---------- */
+/* ---------- FilterPanel (same as before) ---------- */
 function FilterPanel({ open, onClose, filters, current, setCurrent, onReset }) {
   const priceRanges = useMemo(
     () => [
@@ -115,7 +161,7 @@ function FilterPanel({ open, onClose, filters, current, setCurrent, onReset }) {
     <div className={`filter-panel ${open ? "open" : ""}`} aria-hidden={!open}>
       <div className="filter-head">
         <h3>Filters</h3>
-        <button className="drawer-close" onClick={onClose}>
+        <button type="button" className="drawer-close" onClick={onClose} aria-label="Close filters">
           ✕
         </button>
       </div>
@@ -230,10 +276,10 @@ function FilterPanel({ open, onClose, filters, current, setCurrent, onReset }) {
         </section>
 
         <div className="filter-actions">
-          <button className="btn primary" onClick={onClose}>
+          <button type="button" className="btn primary" onClick={onClose}>
             Apply
           </button>
-          <button className="btn" onClick={onReset}>
+          <button type="button" className="btn" onClick={onReset}>
             Reset
           </button>
         </div>
@@ -258,17 +304,14 @@ FilterPanel.propTypes = {
 /* ---------- ProductDetailsOverlay ---------- */
 function ProductDetailsOverlay({ product, onClose, onAdd, onRemove, qty }) {
   if (!product) return null;
-  const { title, description, price, offer_price, images, image, weight, tags, tags_array, brand } = product;
-  const imageList = useMemo(
-    () => (Array.isArray(images) && images.length ? images : image ? [image] : []),
-    [images, image]
-  );
-  const tagList = useMemo(() => cleanTags(tags, tags_array), [tags, tags_array]);
+  const { title, description, images, image, weight, tags, tags_array, brand } = product;
+  const imageList = Array.isArray(images) && images.length ? images : image ? [image] : [];
+  const tagList = cleanTags(tags, tags_array);
 
   return (
     <div className="details-overlay open" onClick={onClose}>
-      <div className="details-content" onClick={(e) => e.stopPropagation()}>
-        <button className="drawer-close" onClick={onClose}>
+      <div className="details-content" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Product details">
+        <button type="button" className="drawer-close" onClick={onClose} aria-label="Close details">
           ✕
         </button>
 
@@ -282,12 +325,12 @@ function ProductDetailsOverlay({ product, onClose, onAdd, onRemove, qty }) {
         )}
         <p>{description}</p>
         <p>
-          <strong>Price:</strong> ₹{offer_price ?? price}
+          <strong>Price:</strong> ₹{product.offer_price ?? product.price}
         </p>
         <p> {weight}</p>
 
         <div className="tags">
-          {tagList.map((t) => (
+          {(tagList || []).map((t) => (
             <span key={String(t)} className="tag">
               {t}
             </span>
@@ -297,12 +340,18 @@ function ProductDetailsOverlay({ product, onClose, onAdd, onRemove, qty }) {
         <div className="qty-controls">
           {qty > 0 ? (
             <>
-              <button onClick={() => onRemove(product)}>−</button>
+              <button type="button" onClick={() => onRemove(product)} aria-label="decrease">
+                −
+              </button>
               <span>{qty}</span>
-              <button onClick={() => onAdd(product)}>+</button>
+              <button type="button" onClick={() => onAdd(product)} aria-label="increase">
+                +
+              </button>
             </>
           ) : (
-            <button onClick={() => onAdd(product)}>＋ Add</button>
+            <button type="button" onClick={() => onAdd(product)}>
+              ＋ Add
+            </button>
           )}
         </div>
       </div>
@@ -320,30 +369,37 @@ ProductDetailsOverlay.propTypes = {
 
 /* ---------- Main Products component ---------- */
 export default function Products() {
+  const navigate = useNavigate();
+
   const [products, setProducts] = useState([]);
   const [raw, setRaw] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [cart, setCart] = useState([]);
+  const [cart, setCart] = useState(() => {
+    try {
+      const s = JSON.parse(sessionStorage.getItem("cart") || "[]");
+      return Array.isArray(s) ? s : [];
+    } catch {
+      return [];
+    }
+  });
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [filters, setFilters] = useState({
     brands: new Set(),
     kgs: new Set(),
-    tags: [], // <-- this will represent categories (preferred) or fallback tags
+    tags: [],
     minPrice: 0,
     maxPrice: 1000,
   });
   const [currentFilter, setCurrentFilter] = useState({
-    brand: null, // single brand radio
-    kgs: null, // single kgs radio
+    brand: null,
+    kgs: null,
     maxPrice: 100000,
-    priceRanges: [], // array of range labels
-    tags: [], // multi-select (acts as category)
+    priceRanges: [],
+    tags: [],
   });
   const [selectedProduct, setSelectedProduct] = useState(null);
-
-  // New states for search + selectedCategory
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(null);
 
@@ -366,7 +422,6 @@ export default function Products() {
     return [];
   };
 
-  // dedupe helper (best-effort)
   const dedupeByKey = (rows) => {
     const seen = new Set();
     const out = [];
@@ -376,19 +431,16 @@ export default function Products() {
       if (!seen.has(key)) {
         seen.add(key);
         out.push(r);
-      } else {
-        // optionally we could merge items here, but for now skip duplicates
       }
     }
     return out;
   };
 
-  // Build brands & weights & tags & categories sets from rows
   const processFilters = (rows) => {
     const brands = new Set();
     const kgs = new Set();
-    const tagsSet = new Set(); // fallback tag list from tags/tags_array
-    const categories = new Set(); // prefer explicit category fields
+    const tagsSet = new Set();
+    const categories = new Set();
     let min = Number.POSITIVE_INFINITY;
     let max = Number.NEGATIVE_INFINITY;
 
@@ -402,13 +454,10 @@ export default function Products() {
         if (ws) kgs.add(ws);
       }
 
-      // collect tags (fallback)
       cleanTags(r.tags, r.tags_array).forEach((t) => {
         if (t) tagsSet.add(t);
       });
 
-      // try to detect explicit categories from common fields
-      // Accept: string (single), array (multiple), or object with name
       const catCandidates = [
         r.category,
         r.categories,
@@ -437,7 +486,6 @@ export default function Products() {
             }
           });
         } else if (typeof c === "object" && c !== null) {
-          // object shape like { id, name }
           const name = c.name ?? c.title ?? c.label;
           if (name) {
             const v = String(name).trim();
@@ -446,9 +494,6 @@ export default function Products() {
         }
       });
 
-      const pTagsArray = Array.isArray(r.tags) ? r.tags : [];
-      if (Array.isArray(r.tags_array)) pTagsArray.push(...r.tags_array);
-
       const p = Number(r.offer_price ?? r.price ?? 0);
       if (!Number.isNaN(p)) {
         min = Math.min(min, p);
@@ -456,8 +501,6 @@ export default function Products() {
       }
     });
 
-    // If explicit categories exist use them as filters.tags (makes Search show categories).
-    // Otherwise fallback to tagsSet (previous behaviour).
     const finalTags = categories.size > 0 ? [...categories] : [...tagsSet];
 
     return {
@@ -497,12 +540,11 @@ export default function Products() {
         setFilters({
           brands: processed.brands,
           kgs: processed.kgs,
-          tags: processed.tags, // these are categories if available
+          tags: processed.tags,
           minPrice: processed.minPrice,
           maxPrice: processed.maxPrice,
         });
 
-        // set sensible defaults for current filter
         setCurrentFilter((c) => ({ ...c, maxPrice: processed.maxPrice }));
       })
       .catch((err) => {
@@ -517,14 +559,12 @@ export default function Products() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Filtering effect: apply brand, price ranges, maxPrice, tags (category), kgs, search, selectedCategory
   useEffect(() => {
     const q = (searchQuery || "").trim().toLowerCase();
 
     const filtered = raw.filter((p) => {
       const pPrice = Number(p.offer_price ?? p.price ?? 0);
 
-      // price range match if any selected
       if (currentFilter.priceRanges?.length > 0) {
         const matchesRange = currentFilter.priceRanges.some((rangeLabel) => {
           const range = priceRanges.find((r) => r.label === rangeLabel);
@@ -534,22 +574,17 @@ export default function Products() {
         if (!matchesRange) return false;
       }
 
-      // max price cutoff
       if (pPrice > (currentFilter.maxPrice ?? Number.POSITIVE_INFINITY)) return false;
 
-      // brand radio (single)
       const pBrand = p.brand ?? p.manufacturer ?? p.mfg ?? p.vendor ?? null;
       if (currentFilter.brand && String(pBrand) !== String(currentFilter.brand)) return false;
 
-      // kgs radio (single) - compare with weight string
       if (currentFilter.kgs) {
         const pWeight = p.weight ?? p.weight_text ?? p.unit ?? "";
         if (!pWeight || String(pWeight) !== String(currentFilter.kgs)) return false;
       }
 
-      // tags (category) multi-select: product must contain at least one selected tag
       if (currentFilter.tags?.length > 0) {
-        // attempt to match selected categories against explicit category fields OR tags
         const pCategories = new Set();
         const catCandidates = [p.category, p.categories, p.category_name, p.cat, p.group];
         catCandidates.forEach((c) => {
@@ -566,7 +601,6 @@ export default function Products() {
         });
 
         const pTags = cleanTags(p.tags, p.tags_array);
-        // match if any of the currentFilter.tags are in pCategories or pTags
         const anyMatch = currentFilter.tags.some((t) => {
           return pCategories.has(t) || (Array.isArray(pTags) && pTags.includes(t));
         });
@@ -574,7 +608,6 @@ export default function Products() {
         if (!anyMatch) return false;
       }
 
-      // selectedCategory (search chips) - override / act in addition to currentFilter.tags
       if (selectedCategory) {
         const pCategories = new Set();
         const catCandidates = [p.category, p.categories, p.category_name, p.cat, p.group];
@@ -595,7 +628,6 @@ export default function Products() {
         if (!(pCategories.has(selectedCategory) || (Array.isArray(pTags) && pTags.includes(selectedCategory)))) return false;
       }
 
-      // Search query: match in title, description, brand, sku, slug, weight or tags
       if (q) {
         const pTags = cleanTags(p.tags, p.tags_array);
         const hay = [
@@ -660,6 +692,15 @@ export default function Products() {
     setCart((prev) => prev.filter((i) => (i.id ?? i.title) !== (product.id ?? product.title)));
   };
 
+  useEffect(() => {
+    // persist cart to sessionStorage as a fallback (keeps across reloads)
+    try {
+      sessionStorage.setItem("cart", JSON.stringify(cart));
+    } catch (e) {
+      // ignore
+    }
+  }, [cart]);
+
   const cartQtyMap = useMemo(() => {
     const map = new Map();
     cart.forEach((i) => map.set(i.id ?? i.title, i.qty));
@@ -680,94 +721,110 @@ export default function Products() {
     });
   };
 
+  /* ---------- Checkout handler (writes cookie + sessionStorage + navigates) ---------- */
+  const handleCheckout = () => {
+    try {
+      const cartCopy = JSON.parse(JSON.stringify(cart));
+      // sessionStorage fallback
+      sessionStorage.setItem("cart", JSON.stringify(cartCopy));
+      // cookie fallback (1 day)
+      setCookie("rice_cart", JSON.stringify(cartCopy), 1);
+      // navigate to checkout route with state
+      navigate("/checkout", { state: { cart: cartCopy } });
+    } catch (err) {
+      console.error("Failed to prepare checkout", err);
+    }
+  };
+
   /* ---------- Render ---------- */
   return (
     <div className="page products-page-wrapper">
       <div className="page-head-wrapper">
-      <div className="page-head">
-        <div className="filterBtn">
-          <button className="btn filter-btn" onClick={() => setFilterOpen((f) => !f)} aria-expanded={filterOpen} title="Toggle filters">
-            <i className="filter-icon"><FaFilter /></i> 
-          </button>
+        <div className="page-head">
+          <div className="filterBtn">
+            <button
+              type="button"
+              className="btn filter-btn"
+              onClick={() => setFilterOpen((f) => !f)}
+              aria-expanded={filterOpen}
+              title="Toggle filters"
+            >
+              <i className="filter-icon"><FaFilter /></i>
+            </button>
+          </div>
+
+          <div style={{ marginTop: 12, width: "100%" }}>
+            <Search
+              tags={filters.tags}
+              tagsApi={PRODUCTS_API}
+              onSearch={(q) => {
+                setSearchQuery(q);
+                setCurrentFilter((c) => ({ ...c, search: q }));
+              }}
+              onSelectTag={(tag) => {
+                setSelectedCategory(tag);
+                setCurrentFilter((c) => ({ ...c, tags: tag ? [tag] : [] }));
+              }}
+              placeholder="Search rice, brand, weight"
+              debounceMs={300}
+            />
+          </div>
         </div>
 
-        {/* Moved search wrapper here so search + category chips are inside page-head */}
-        <div style={{ marginTop: 12, width: "100%" }}>
-          <Search
-            tags={filters.tags} // filters.tags now represents categories (if available)
-            tagsApi={PRODUCTS_API} // optional: Search will fetch tags/categories if none provided
-            onSearch={(q) => {
-              setSearchQuery(q);
-              // Keep currentFilter.search in sync if you want
-              setCurrentFilter((c) => ({ ...c, search: q }));
-            }}
-            onSelectTag={(tag) => {
-              setSelectedCategory(tag);
-              // sync with currentFilter.tags for consistency (optional)
-              setCurrentFilter((c) => ({ ...c, tags: tag ? [tag] : [] }));
-            }}
-            placeholder="Search rice, brand, weight"
-            debounceMs={300}
-          />
-        </div>
-      </div>
-
-      <div className="page-head-1">
-        {loading && (
-          <div className="cards-parent" aria-busy="true">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="card skeleton">
-                <div className="card-media skel-media" />
-                <div className="card-body">
-                  <div className="skel-line medium" />
-                  <div className="skel-line short" />
-                  <div className="skel-line" />
+        <div className="page-head-1">
+          {loading && (
+            <div className="cards-parent" aria-busy="true">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="card skeleton">
+                  <div className="card-media skel-media" />
+                  <div className="card-body">
+                    <div className="skel-line medium" />
+                    <div className="skel-line short" />
+                    <div className="skel-line" />
+                  </div>
                 </div>
+              ))}
+            </div>
+          )}
+
+          {!loading && error && (
+            <div className="error-box">
+              <div className="error-title">Error: {error}</div>
+              <div className="error-actions">
+                <button type="button" className="btn primary" onClick={fetchProducts}>Try again</button>
               </div>
-            ))}
-          </div>
-        )}
-
-        {!loading && error && (
-          <div style={{ padding: 16, background: "#fff6f6", borderRadius: 8 }}>
-            <div style={{ color: "#b33", fontWeight: 700 }}>Error: {error}</div>
-            <div style={{ marginTop: 8 }}>
-              <button className="btn primary" onClick={fetchProducts}>
-                Try again
-              </button>
             </div>
-          </div>
-        )}
+          )}
 
-        {!loading && !error && products.length === 0 && (
-          <div style={{ padding: 16 }}>
-            No products found. <button className="btn" onClick={resetFilters}>Reset filters</button>
-          </div>
-        )}
-
-        {!loading && !error && products.length > 0 && (
-          <div className="products-section-wrapper" style={{ marginTop: 12 }}>
-            <div className="cards-parent">
-              {products.map((p, idx) => {
-                // stable key: prefer id/sku/slug/title and append index to guarantee uniqueness
-                const base = String(p.id ?? p.sku ?? p.slug ?? p.title ?? "product");
-                const stableKey = `${base}-${idx}`;
-                return (
-                  <Cards
-                    key={stableKey}
-                    product={p}
-                    onAdd={addToCart}
-                    onRemove={removeOne}
-                    qty={cartQtyMap.get(p.id ?? p.title) ?? 0}
-                    onOpenDetails={() => setSelectedProduct(p)}
-                  />
-                );
-              })}
+          {!loading && !error && products.length === 0 && (
+            <div className="no-products">
+              No products found. <button type="button" className="btn" onClick={resetFilters}>Reset filters</button>
             </div>
-          </div>
-        )}
+          )}
+
+          {!loading && !error && products.length > 0 && (
+            <div className="products-section-wrapper" style={{ marginTop: 12 }}>
+              <div className="cards-parent">
+                {products.map((p, idx) => {
+                  const base = String(p.id ?? p.sku ?? p.slug ?? p.title ?? "product");
+                  const stableKey = `${base}-${idx}`;
+                  return (
+                    <Cards
+                      key={stableKey}
+                      product={p}
+                      onAdd={addToCart}
+                      onRemove={removeOne}
+                      qty={cartQtyMap.get(p.id ?? p.title) ?? 0}
+                      onOpenDetails={() => setSelectedProduct(p)}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
-</div>
+
       <FilterPanel
         open={filterOpen}
         onClose={() => setFilterOpen(false)}
@@ -777,19 +834,31 @@ export default function Products() {
         onReset={resetFilters}
       />
 
-      <CartDrawer
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        items={cart}
-        onInc={addToCart}
-        onDec={removeOne}
-        onRemove={removeAll}
-      />
+      {/* Only render cart drawer when there are items */}
+      {cart.length > 0 && (
+        <CartDrawer
+          open={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
+          items={cart}
+          onInc={addToCart}
+          onDec={removeOne}
+          onRemove={removeAll}
+          onCheckout={handleCheckout}
+        />
+      )}
 
-      <button className="cart-badge-btn" onClick={() => setDrawerOpen(true)} aria-label="Open cart">
-        <i className="cart-icon">🛒</i>
-        {totalCartItems > 0 && <span className="badge">{totalCartItems}</span>}
-      </button>
+      {/* cart badge button only when items > 0 */}
+      {totalCartItems > 0 && (
+        <button
+          type="button"
+          className="cart-badge-btn"
+          onClick={() => setDrawerOpen(true)}
+          aria-label="Open cart"
+        >
+          <i className="cart-icon"><FaShoppingCart /></i>
+          {totalCartItems > 0 && <span className="badge" aria-hidden="false">{totalCartItems}</span>}
+        </button>
+      )}
 
       <ProductDetailsOverlay
         product={selectedProduct}

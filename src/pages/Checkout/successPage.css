@@ -1,0 +1,54 @@
+/* successPage.css */
+.success-page {
+  min-height: 80vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: #fafafa;
+}
+
+.success-card {
+  width: 100%;
+  max-width: 760px;
+  background: #fff;
+  border-radius: 12px;
+  padding: 28px;
+  box-shadow: 0 12px 40px rgba(2,6,23,0.08);
+  text-align: center;
+}
+
+.success-icon {
+  font-size: 48px;
+  color: #0bb859;
+  margin-bottom: 8px;
+}
+
+.success-card h1 {
+  margin: 6px 0 10px;
+  font-size: 22px;
+}
+
+.order-id {
+  margin: 6px 0 12px;
+  color: #222;
+  font-size: 15px;
+}
+
+.eta {
+  color: #444;
+  margin-bottom: 10px;
+}
+
+.redirect-note {
+  color: #666;
+  margin-top: 8px;
+  font-size: 13px;
+}
+
+.success-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 18px;
+}
