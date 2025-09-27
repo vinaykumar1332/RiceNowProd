@@ -467,7 +467,7 @@ label {
   color: #fff;
   border: none;
   padding: 6px 10px;
-  border-radius: 6px; 
+  border-radius: 6px;
   cursor: pointer;
   transition: var(--transition-base);
 }
@@ -487,25 +487,26 @@ label {
 /* --------------------
    Small helpers & buttons
    -------------------- */
-   .page-head-wrapper{
-.btn {
-  background: #fff;
-  border: 1px solid var(--card-border);
-  padding: 8px 10px;
-  border-radius: var(--border-radius);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.9rem;
-  transition: var(--transition-base);
-  position: relative;
-  .filter-icon{
+.page-head-wrapper {
+  .btn {
+    background: #fff;
+    border: 1px solid var(--card-border);
+    padding: 8px 10px;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.9rem;
+    transition: var(--transition-base);
     position: relative;
-    top:4px;
+
+    .filter-icon {
+      position: relative;
+      top: 4px;
+    }
   }
 }
-   }
 
 
 .btn.primary {
@@ -542,7 +543,7 @@ label {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   transition: transform 0.2s, box-shadow 0.2s;
   z-index: 1200;
-  
+
 }
 
 .cart-badge-btn:hover {
@@ -573,7 +574,7 @@ label {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  border: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -708,14 +709,14 @@ label>input[type="checkbox"] {
   }
 
   .filter-body {
-    padding: 12px;
+    padding: 20px;
     gap: 16px;
   }
 
   .filter-head {
     padding: 1.5rem;
     max-height: 32px;
-    top:12px
+    top: 12px
   }
 
   /* keep filter action buttons side-by-side on mobile (two columns) */
@@ -814,31 +815,35 @@ label>input[type="checkbox"] {
     }
   }
 }
-.page-head-wrapper{
-  position:relative;
-  top:-80px;
+
+.page-head-wrapper {
+  position: relative;
+  top: -80px;
 }
 
-.cart-actions-row{
+.cart-actions-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
   background: #ffff;
-  .btn.primary{
+
+  .btn.primary {
     padding: 8px 12px;
     font-size: 0.9rem;
     border-radius: 6px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     transition: transform 0.2s, box-shadow 0.2s;
-    svg{
-      font-size:1rem;
+
+    svg {
+      font-size: 1rem;
       position: relative;
-      top:3px;
-      
+      top: 3px;
+
     }
 
   }
-  .btn.cancel{
+
+  .btn.cancel {
     padding: 8px 12px;
     font-size: 0.9rem;
     border-radius: 6px;
@@ -847,26 +852,113 @@ label>input[type="checkbox"] {
   }
 }
 
-.cart-icon{
+.cart-icon {
   position: relative;
-  top:3px;
-  font-size:1.3rem ;
+  top: 3px;
+  font-size: 1.3rem;
 
 }
-.details-overlay.open{
-  .details-content{
-    .qty-controls{
+
+.details-overlay.open {
+  .details-content {
+    .qty-controls {
       display: none;
     }
   }
 }
-.cart-footer{
-  .cart-total{
+
+.cart-footer {
+  .cart-total {
     text-align: center;
     font-weight: 700;
     font-size: 1.1rem;
     margin-bottom: 6px;
     border: 1px solid var(--card-border);
 
+  }
+}
+
+.details-overlay.open {
+  .carousel-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    padding: 12px;
+    border-radius: 8px;
+  }
+
+  .carousel-main {
+    width: 100%;
+    max-height: 80vh;
+    min-height: 40vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    img{
+      border-radius: 8px;
+      height: 100%;
+      width: 100%;
+      object-fit: contain;
+    }
+  }
+
+
+  .carousel-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0, 0, 0, 0.35);
+    color: #fff;
+    border: none;
+    padding: 6px 10px;
+    font-size: 22px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .carousel-nav.left {
+    left: 8px;
+  }
+
+  .carousel-nav.right {
+    right: 8px;
+  }
+
+  .carousel-thumbs {
+   display:none;
+  }
+
+  .thumb-btn {
+    border: none;
+    background: transparent;
+    padding: 0;
+    cursor: pointer;
+    outline: none;
+  }
+
+  .thumb-btn.active {
+    box-shadow: 0 0 0 2px var(--accent-color, #3182ce);
+    border-radius: 6px;
+  }
+
+  .thumb-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    border-radius: 4px;
+  }
+
+  .details-meta-block {
+    padding: 8px 12px;
+    overflow: auto;
+  }
+
+  .details-desc {
+    color: #444;
+    margin-top: 8px;
+    margin-bottom: 10px;
   }
 }
