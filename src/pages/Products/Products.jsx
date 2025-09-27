@@ -5,12 +5,12 @@ import { useNavigate } from "react-router-dom";
 import Cards from "./cards/cards";
 import "./Products.css";
 import { FaFilter } from "react-icons/fa6";
-import { FaShoppingCart,FaTrash } from "react-icons/fa";
+import { FaShoppingCart, FaTrash } from "react-icons/fa";
 import Search from "./Search/Search";
 import { VITE_PRODUCTS_API } from "../../API";
 import { MdOutlineShoppingCartCheckout } from "react-icons/md";
 import { cleanTags } from "../../utils/helpers";
-
+import Image from "./Images/Image"; // <-- make sure this path & casing match your file
 
 const PRODUCTS_API = VITE_PRODUCTS_API;
 
@@ -34,10 +34,7 @@ function setCookie(name, value, days = 1) {
 function CartDrawer({ open, onClose, items, onInc, onDec, onRemove, onCheckout }) {
   const total = useMemo(
     () =>
-      items.reduce(
-        (s, i) => s + (Number(i.offer_price ?? i.price ?? 0) * (i.qty ?? 0)),
-        0
-      ),
+      items.reduce((s, i) => s + (Number(i.offer_price ?? i.price ?? 0) * (i.qty ?? 0)), 0),
     [items]
   );
 
@@ -50,12 +47,7 @@ function CartDrawer({ open, onClose, items, onInc, onDec, onRemove, onCheckout }
     >
       <div className="cart-header">
         <h3 className="cart-title">Your Cart</h3>
-        <button
-          type="button"
-          className="drawer-close"
-          onClick={onClose}
-          aria-label="Close cart"
-        >
+        <button type="button" className="drawer-close" onClick={onClose} aria-label="Close cart">
           ✕
         </button>
       </div>
@@ -93,12 +85,7 @@ function CartDrawer({ open, onClose, items, onInc, onDec, onRemove, onCheckout }
                   <button type="button" className="btn" onClick={() => onInc(it)} aria-label="increase">
                     +
                   </button>
-                  <button
-                    type="button"
-                    className="remove"
-                    onClick={() => onRemove(it)}
-                    aria-label="remove"
-                  >
+                  <button type="button" className="remove" onClick={() => onRemove(it)} aria-label="remove">
                     <FaTrash />
                   </button>
                 </div>
@@ -142,7 +129,7 @@ CartDrawer.propTypes = {
   onCheckout: PropTypes.func,
 };
 
-/* ---------- FilterPanel (same as before) ---------- */
+/* ---------- FilterPanel ---------- */
 function FilterPanel({ open, onClose, filters, current, setCurrent, onReset }) {
   const priceRanges = useMemo(
     () => [
@@ -250,13 +237,7 @@ function FilterPanel({ open, onClose, filters, current, setCurrent, onReset }) {
           <h4>Kgs</h4>
           <div className="kg-radios">
             <label>
-              <input
-                type="radio"
-                name="kgs"
-                value=""
-                checked={!current.kgs}
-                onChange={() => setCurrent((c) => ({ ...c, kgs: null }))}
-              />
+              <input type="radio" name="kgs" value="" checked={!current.kgs} onChange={() => setCurrent((c) => ({ ...c, kgs: null }))} />
               All
             </label>
             {kgOptions.map((k) => (
@@ -301,58 +282,165 @@ FilterPanel.propTypes = {
   onReset: PropTypes.func.isRequired,
 };
 
-/* ---------- ProductDetailsOverlay ---------- */
+/* ---------- ProductDetailsOverlay (carousel) ---------- */
 function ProductDetailsOverlay({ product, onClose, onAdd, onRemove, qty }) {
   if (!product) return null;
+
   const { title, description, images, image, weight, tags, tags_array, brand } = product;
-  const imageList = Array.isArray(images) && images.length ? images : image ? [image] : [];
+
+  // Normalize image list
+  const imageListBase = Array.isArray(images) && images.length ? images.slice() : image ? [image] : [];
+  if (imageListBase.length === 0) {
+    const extra = product.image_id ?? product.drive_image_id ?? product.driveId ?? null;
+    if (extra) imageListBase.push(extra);
+  }
+
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    if (index >= imageListBase.length) setIndex(Math.max(0, imageListBase.length - 1));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [imageListBase.length]);
+
+  // keyboard support
+  useEffect(() => {
+    const onKey = (e) => {
+      if (!product) return;
+      if (e.key === "ArrowLeft") {
+        setIndex((i) => (i > 0 ? i - 1 : imageListBase.length - 1));
+      } else if (e.key === "ArrowRight") {
+        setIndex((i) => (i < imageListBase.length - 1 ? i + 1 : 0));
+      } else if (e.key === "Escape") {
+        onClose && onClose();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [product, imageListBase.length, onClose]);
+
+  if (imageListBase.length === 0) {
+    // fallback UI when no images
+    const tagList = cleanTags(tags, tags_array);
+    return (
+      <div className="details-overlay open" onClick={onClose}>
+        <div className="details-content" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Product details">
+          <button type="button" className="drawer-close" onClick={onClose} aria-label="Close details">✕</button>
+
+          <div className="details-body no-image">
+            <div className="details-text">
+              <h2>{title}</h2>
+              {brand && <p><strong>Brand:</strong> {brand}</p>}
+              <p>{description}</p>
+              <p><strong>Price:</strong> ₹{product.offer_price ?? product.price}</p>
+              <p>{weight}</p>
+
+              <div className="tags">
+                {(tagList || []).map((t) => <span key={String(t)} className="tag">{t}</span>)}
+              </div>
+            </div>
+          </div>
+
+          <div className="qty-controls">
+            {qty > 0 ? (
+              <>
+                <button type="button" onClick={() => onRemove(product)} aria-label="decrease">−</button>
+                <span>{qty}</span>
+                <button type="button" onClick={() => onAdd(product)} aria-label="increase">+</button>
+              </>
+            ) : (
+              <button type="button" onClick={() => onAdd(product)}>＋ Add</button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const goPrev = (e) => {
+    e?.stopPropagation();
+    setIndex((i) => (i > 0 ? i - 1 : imageListBase.length - 1));
+  };
+
+  const goNext = (e) => {
+    e?.stopPropagation();
+    setIndex((i) => (i < imageListBase.length - 1 ? i + 1 : 0));
+  };
+
+  const jumpTo = (i) => (e) => {
+    e?.stopPropagation();
+    setIndex(i);
+  };
+
+  const isFullUrl = (str) => typeof str === "string" && /^(https?:\/\/|data:|blob:)/i.test(str.trim());
+
   const tagList = cleanTags(tags, tags_array);
 
   return (
     <div className="details-overlay open" onClick={onClose}>
-      <div className="details-content" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Product details">
-        <button type="button" className="drawer-close" onClick={onClose} aria-label="Close details">
-          ✕
-        </button>
+      <div className="details-content details-carousel" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Product details">
+        <button type="button" className="drawer-close" onClick={onClose} aria-label="Close details">✕</button>
 
-        {imageList[0] && <img src={imageList[0]} alt={title} className="details-image" />}
+        <div className="carousel-wrap">
+          <button className="carousel-nav left" onClick={goPrev} aria-label="Previous image">‹</button>
 
-        <h2>{title}</h2>
-        {brand && (
-          <p>
-            <strong>Brand:</strong> {brand}
-          </p>
-        )}
-        <p>{description}</p>
-        <p>
-          <strong>Price:</strong> ₹{product.offer_price ?? product.price}
-        </p>
-        <p> {weight}</p>
+          <div className="carousel-main">
+            <Image
+              imageUrl={isFullUrl(imageListBase[index]) ? imageListBase[index] : null}
+              imageId={isFullUrl(imageListBase[index]) ? null : imageListBase[index]}
+              alt={`${title} (${index + 1}/${imageListBase.length})`}
+              size={1000}
+              className="carousel-image"
+              style={{ width: "100%", height: "100%" }}
+            />
+          </div>
 
-        <div className="tags">
-          {(tagList || []).map((t) => (
-            <span key={String(t)} className="tag">
-              {t}
-            </span>
+          <button className="carousel-nav right" onClick={goNext} aria-label="Next image">›</button>
+        </div>
+
+        <div className="carousel-thumbs" role="tablist" aria-label="Image thumbnails">
+          {imageListBase.map((img, i) => (
+            <button
+              key={String(img) + "-" + i}
+              type="button"
+              className={`thumb-btn ${i === index ? "active" : ""}`}
+              onClick={jumpTo(i)}
+              aria-label={`Show image ${i + 1}`}
+              aria-selected={i === index}
+            >
+              <Image
+                imageUrl={isFullUrl(img) ? img : null}
+                imageId={isFullUrl(img) ? null : img}
+                alt={`${title} thumbnail ${i + 1}`}
+                size={160}
+                className="thumb-image"
+                style={{ width: 80, height: 80, borderRadius: 4 }}
+              />
+            </button>
           ))}
         </div>
 
-        <div className="qty-controls">
-          {qty > 0 ? (
-            <>
-              <button type="button" onClick={() => onRemove(product)} aria-label="decrease">
-                −
-              </button>
-              <span>{qty}</span>
-              <button type="button" onClick={() => onAdd(product)} aria-label="increase">
-                +
-              </button>
-            </>
-          ) : (
-            <button type="button" onClick={() => onAdd(product)}>
-              ＋ Add
-            </button>
-          )}
+        <div className="details-meta-block">
+          <h2>{title}</h2>
+          {brand && <p><strong>Brand:</strong> {brand}</p>}
+          <p className="details-desc">{description}</p>
+          <p><strong>Price:</strong> ₹{product.offer_price ?? product.price}</p>
+          <p><strong>Weight:</strong> {weight}</p>
+
+          <div className="tags">
+            {(tagList || []).map((t) => <span key={String(t)} className="tag">{t}</span>)}
+          </div>
+
+          <div className="qty-controls">
+            {qty > 0 ? (
+              <>
+                <button type="button" onClick={() => onRemove(product)} aria-label="decrease">−</button>
+                <span>{qty}</span>
+                <button type="button" onClick={() => onAdd(product)} aria-label="increase">+</button>
+              </>
+            ) : (
+              <button type="button" onClick={() => onAdd(product)}>＋ Add</button>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -458,16 +546,7 @@ export default function Products() {
         if (t) tagsSet.add(t);
       });
 
-      const catCandidates = [
-        r.category,
-        r.categories,
-        r.category_name,
-        r.cat,
-        r.categoryId,
-        r.taxonomy,
-        r.type,
-        r.group,
-      ];
+      const catCandidates = [r.category, r.categories, r.category_name, r.cat, r.categoryId, r.taxonomy, r.type, r.group];
 
       catCandidates.forEach((c) => {
         if (!c) return;
@@ -825,36 +904,14 @@ export default function Products() {
         </div>
       </div>
 
-      <FilterPanel
-        open={filterOpen}
-        onClose={() => setFilterOpen(false)}
-        filters={filters}
-        current={currentFilter}
-        setCurrent={setCurrentFilter}
-        onReset={resetFilters}
-      />
+      <FilterPanel open={filterOpen} onClose={() => setFilterOpen(false)} filters={filters} current={currentFilter} setCurrent={setCurrentFilter} onReset={resetFilters} />
 
-      {/* Only render cart drawer when there are items */}
       {cart.length > 0 && (
-        <CartDrawer
-          open={drawerOpen}
-          onClose={() => setDrawerOpen(false)}
-          items={cart}
-          onInc={addToCart}
-          onDec={removeOne}
-          onRemove={removeAll}
-          onCheckout={handleCheckout}
-        />
+        <CartDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} items={cart} onInc={addToCart} onDec={removeOne} onRemove={removeAll} onCheckout={handleCheckout} />
       )}
 
-      {/* cart badge button only when items > 0 */}
       {totalCartItems > 0 && (
-        <button
-          type="button"
-          className="cart-badge-btn"
-          onClick={() => setDrawerOpen(true)}
-          aria-label="Open cart"
-        >
+        <button type="button" className="cart-badge-btn" onClick={() => setDrawerOpen(true)} aria-label="Open cart">
           <i className="cart-icon"><FaShoppingCart /></i>
           {totalCartItems > 0 && <span className="badge" aria-hidden="false">{totalCartItems}</span>}
         </button>

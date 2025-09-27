@@ -1,14 +1,16 @@
 import React, { useMemo, useState } from "react";
-import PropTypes from 'prop-types';
+import PropTypes from "prop-types";
 import "./cards.css";
 import { cleanTags } from "../../../utils/helpers"; // Adjust path if needed
+import Image from "../Images/Image"; // Ensure this path matches your project
+import { TbListDetails } from "react-icons/tb";
 
 const MemoizedCards = React.memo(function Cards({
   product = {},
   onAdd = () => {},
   onRemove = () => {},
   qty = 0,
-  onOpenDetails = () => {}
+  onOpenDetails = () => {},
 }) {
   const [expanded, setExpanded] = useState(false); // local overlay state
 
@@ -28,10 +30,37 @@ const MemoizedCards = React.memo(function Cards({
     category = "Unknown",
   } = product;
 
+  // Determine candidate image (prefer images array -> image -> known id fields)
+  const rawCandidate = useMemo(() => {
+    return (
+      (Array.isArray(images) && images.length && images[0]) ||
+      image ||
+      product.image_id ||
+      product.drive_image_id ||
+      product.driveId ||
+      null
+    );
+  }, [images, image, product]);
+
+  // Heuristic to check if candidate is a full url or a drive id
+  const isFullUrl = useMemo(() => {
+    if (!rawCandidate || typeof rawCandidate !== "string") return false;
+    return /^(https?:\/\/|data:|blob:)/i.test(rawCandidate.trim());
+  }, [rawCandidate]);
+
+  // If image list is present (array of urls/ids), prepare that array for other uses (overlay etc.)
   const imageList = useMemo(
-    () => (Array.isArray(images) && images.length ? images : image ? [image] : []),
-    [images, image]
+    () =>
+      Array.isArray(images) && images.length
+        ? images
+        : image
+        ? [image]
+        : rawCandidate
+        ? [rawCandidate]
+        : [],
+    [images, image, rawCandidate]
   );
+
   const tagList = useMemo(() => cleanTags(tags, tags_array), [tags, tags_array]);
   const isActive = String(active ?? stock ?? "").toLowerCase() === "active";
   const displayWeight = weight || (Array.isArray(weights) ? weights.join(", ") : "—");
@@ -57,16 +86,16 @@ const MemoizedCards = React.memo(function Cards({
   return (
     <article className={`card ${isActive ? "card-active" : "card-inactive"}`} aria-hidden={!isActive}>
       <div className="card-media">
-        <div className="media-figure" role="img" aria-label={title}>
+        <div className="media-figure" role="img" aria-label={title} onClick={() => onOpenDetails(product)} style={{ cursor: "pointer" }}>
           {imageList.length ? (
-            <img
-              src={imageList[0]}
+            // Use Image component - pass imageUrl for full URLs, imageId for Drive IDs
+            <Image
+              imageUrl={isFullUrl ? rawCandidate : null}
+              imageId={isFullUrl ? null : rawCandidate}
               alt={title}
-              loading="lazy"
-              onError={(e) => {
-                e.currentTarget.src =
-                  "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='400'><rect width='100%' height='100%' fill='%23f0f0f0'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%23999' font-size='18'>Image not available</text></svg>";
-              }}
+              size={300}
+              className="card-img"
+              style={{ width: "100%", height: 180 }}
             />
           ) : (
             <div className="image-placeholder">No image</div>
@@ -84,7 +113,9 @@ const MemoizedCards = React.memo(function Cards({
 
       <div className="card-body">
         <div className="card-head">
-          <h3 className="card-title">{title}</h3>
+          <h3 className="card-title" onClick={() => onOpenDetails(product)} style={{ cursor: "pointer" }}>
+            {title}
+          </h3>
           <div className="brand-stock">
             <span className="category">{category}</span>
           </div>
@@ -98,14 +129,18 @@ const MemoizedCards = React.memo(function Cards({
         </div>
 
         <div className="info-row">
-          <div><strong>Weight:</strong> {displayWeight}</div>
+          <div>
+            <strong>Weight:</strong> {displayWeight}
+          </div>
         </div>
 
         <div className="tags-row">
           {tagList.length ? (
             <div className="tags">
-              {tagList.slice(0,2).map((t,i) => (
-                <span className="tag" key={i} title={t}>{t}</span>
+              {tagList.slice(0, 2).map((t, i) => (
+                <span className="tag" key={i} title={t}>
+                  {t}
+                </span>
               ))}
               {tagList.length > 2 && <span className="tag tag-more">+{tagList.length - 2}</span>}
             </div>
@@ -122,17 +157,32 @@ const MemoizedCards = React.memo(function Cards({
           <div className="qty-controls" aria-hidden={!isActive}>
             {qty > 0 ? (
               <>
-                <button className="qty-btn" onClick={() => onRemove(product)} aria-label={`Decrease ${title}`}>−</button>
+                <button className="qty-btn" onClick={() => onRemove(product)} aria-label={`Decrease ${title}`}>
+                  −
+                </button>
                 <span className="qty">{qty}</span>
-                <button className="qty-btn" onClick={() => onAdd(product)} aria-label={`Increase ${title}`}>+</button>
+                <button className="qty-btn" onClick={() => onAdd(product)} aria-label={`Increase ${title}`}>
+                  +
+                </button>
               </>
             ) : (
-              <button className="add-btn" onClick={() => onAdd(product)} disabled={!isActive} aria-label={`Add ${title} to cart`}>＋ Add</button>
+              <button className="add-btn" onClick={() => onAdd(product)} disabled={!isActive} aria-label={`Add ${title} to cart`}>
+                ＋ Add
+              </button>
             )}
           </div>
 
-          <button className="details-btn" onClick={(e) => { onOpenDetails(product); handleOpenOverlay(e); }} aria-expanded={expanded} aria-controls="details-panel">
-            Details
+          <button
+           title="View details"
+            className="details-btn"
+            onClick={(e) => {
+              onOpenDetails(product);
+              handleOpenOverlay(e);
+            }}
+            aria-expanded={expanded}
+            aria-controls="details-panel"
+          >
+           <TbListDetails />
           </button>
         </div>
       </div>
@@ -141,7 +191,9 @@ const MemoizedCards = React.memo(function Cards({
       {expanded && (
         <div className="details-overlay" role="dialog" aria-modal="true" id="details-panel" onClick={handleCloseOverlay}>
           <div className="details-panel" onClick={(e) => e.stopPropagation()}>
-            <button className="details-close" onClick={handleCloseOverlay} aria-label="Close details">✕</button>
+            <button className="details-close" onClick={handleCloseOverlay} aria-label="Close details">
+              ✕
+            </button>
             <div className="details-inner">
               <div className="details-header">
                 <h4>{title}</h4>
@@ -149,20 +201,34 @@ const MemoizedCards = React.memo(function Cards({
               </div>
               <div className="details-body">
                 <div className="details-image-wrap">
-                  {imageList.length ? <img src={imageList[0]} alt={title} /> : <div className="image-placeholder">No image</div>}
+                  {imageList.length ? (
+                    // Use Image here as well (overlay larger size)
+                    <Image
+                      imageUrl={isFullUrl ? rawCandidate : null}
+                      imageId={isFullUrl ? null : rawCandidate}
+                      alt={title}
+                      size={800}
+                      className="details-img"
+                      style={{ width: "100%", height: "auto" }}
+                    />
+                  ) : (
+                    <div className="image-placeholder">No image</div>
+                  )}
                 </div>
                 <div className="details-text">
                   <p className="full-desc">{description}</p>
                   <div className="details-meta">
-                    <div><strong>Category:</strong> {category}</div>
-                    <div><strong>Weight:</strong> {displayWeight}</div>
+                    <div>
+                      <strong>Category:</strong> {category}
+                    </div>
+                    <div>
+                      <strong>Weight:</strong> {displayWeight}
+                    </div>
                     <div className="price-block">
                       {offer_price ? <div className="offer-large">₹{Number(offer_price).toFixed(2)}</div> : null}
                       {price && String(price) !== String(offer_price) ? <div className="orig-large">₹{Number(price).toFixed(2)}</div> : null}
                     </div>
-                    <div className="tag-list">
-                      {tagList.map((t, idx) => <span key={idx} className="tag">{t}</span>)}
-                    </div>
+                    <div className="tag-list">{tagList.map((t, idx) => <span key={idx} className="tag">{t}</span>)}</div>
                   </div>
                 </div>
               </div>
@@ -171,16 +237,24 @@ const MemoizedCards = React.memo(function Cards({
                 <div className="qty-controls">
                   {qty > 0 ? (
                     <>
-                      <button className="qty-btn" onClick={() => onRemove(product)} aria-label={`Decrease ${title}`}>−</button>
+                      <button className="qty-btn" onClick={() => onRemove(product)} aria-label={`Decrease ${title}`}>
+                        −
+                      </button>
                       <span className="qty">{qty}</span>
-                      <button className="qty-btn" onClick={() => onAdd(product)} aria-label={`Increase ${title}`}>+</button>
+                      <button className="qty-btn" onClick={() => onAdd(product)} aria-label={`Increase ${title}`}>
+                        +
+                      </button>
                     </>
                   ) : (
-                    <button className="add-btn" onClick={() => onAdd(product)} aria-label={`Add ${title} to cart`}>＋ Add</button>
+                    <button className="add-btn" onClick={() => onAdd(product)} aria-label={`Add ${title} to cart`}>
+                      ＋ Add
+                    </button>
                   )}
                 </div>
 
-                <button className="close-secondary" onClick={handleCloseOverlay} aria-label="Close details">Close</button>
+                <button className="close-secondary" onClick={handleCloseOverlay} aria-label="Close details">
+                  Close
+                </button>
               </div>
             </div>
           </div>
@@ -205,6 +279,9 @@ MemoizedCards.propTypes = {
     stock: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     active: PropTypes.oneOfType([PropTypes.string, PropTypes.bool]),
     category: PropTypes.string,
+    image_id: PropTypes.string,
+    drive_image_id: PropTypes.string,
+    driveId: PropTypes.string,
   }),
   onAdd: PropTypes.func,
   onRemove: PropTypes.func,
