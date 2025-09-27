@@ -1,0 +1,98 @@
+
+.thank-you-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 10, 15, 0.55);
+  z-index: 9999;
+  padding: 20px;
+}
+
+.thank-you-box {
+  background: #fff;
+  color: #111;
+  width: min(680px, 96%);
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(2, 6, 23, 0.4);
+  padding: 28px;
+  text-align: center;
+  max-width: 720px;
+}
+
+.thank-icon {
+  font-size: 48px;
+  color: #0bb859;
+  margin-bottom: 8px;
+}
+
+.thank-you-box h2 {
+  margin: 6px 0 8px;
+  font-size: 22px;
+}
+
+.thank-you-box p {
+  margin: 8px 0;
+  color: #333;
+}
+
+.thank-you-box .eta {
+  margin-top: 6px;
+  font-size: 15px;
+  color: #444;
+}
+
+.thank-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 18px;
+}
+
+/* Place Order spinner (small circle) */
+.place-order-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* spinner circle */
+.spinner {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-top-color: rgba(255, 255, 255, 1);
+  animation: spin 0.9s linear infinite;
+  display: inline-block;
+  box-sizing: border-box;
+}
+
+/* If you have a light button style, override spinner borders for dark outline */
+.btn.primary .spinner {
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-top-color: rgba(255, 255, 255, 1);
+}
+
+/* For non-primary (dark-on-light) button versions */
+.btn .spinner {
+  border: 2px solid rgba(0, 0, 0, 0.12);
+  border-top-color: rgba(0, 0, 0, 0.6);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* small responsive tweaks */
+@media (max-width: 480px) {
+  .thank-you-box {
+    padding: 18px;
+  }
+  .thank-icon {
+    font-size: 42px;
+  }
+}

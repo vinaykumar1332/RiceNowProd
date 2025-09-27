@@ -88,16 +88,17 @@ label {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 16px;
+  padding: 1.5rem;
   border-bottom: 1px solid var(--card-border);
   background: var(--bg-light);
   font-size: 1rem;
   font-weight: 700;
   color: var(--text-primary);
   gap: 12px;
-  position: sticky;
-  top: 0;
+  position: relative;
+  top: -4px;
   z-index: 12;
+  max-height: 42px;
   /* sit above the scrolling body */
 }
 
@@ -276,21 +277,21 @@ label {
    -------------------- */
 .filter-actions {
   /* Sticky footer positioned at bottom of the filter panel */
-  position: sticky;
+  position: fixed;
   bottom: 0;
   z-index: 14;
   /* above the body but below header if needed */
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px 16px;
+  padding: 12px 60px;
+  width: 320px;
+  max-width: 85%;
   border-top: 1px solid var(--card-border);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 1));
   backdrop-filter: blur(4px);
   align-items: center;
-  /* ensure the footer has explicit height so we can add bottom padding to the scrolling body */
-  min-height: var(--filter-footer-height);
-  box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.04);
+
 }
 
 /* make both buttons flex:1 and consistent heights */
@@ -405,7 +406,7 @@ label {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 1rem;
 }
 
 .cart-footer {
@@ -413,7 +414,7 @@ label {
   border-top: 1px solid var(--card-border);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 1rem;
 }
 
 /* cart items */
@@ -465,6 +466,10 @@ label {
   background: #f33;
   color: #fff;
   border: none;
+  padding: 6px 10px;
+  border-radius: 6px; 
+  cursor: pointer;
+  transition: var(--transition-base);
 }
 
 .cart-actions .remove:hover {
@@ -486,7 +491,7 @@ label {
 .btn {
   background: #fff;
   border: 1px solid var(--card-border);
-  padding: 8px 12px;
+  padding: 8px 10px;
   border-radius: var(--border-radius);
   cursor: pointer;
   display: inline-flex;
@@ -495,6 +500,10 @@ label {
   font-size: 0.9rem;
   transition: var(--transition-base);
   position: relative;
+  .filter-icon{
+    position: relative;
+    top:4px;
+  }
 }
    }
 
@@ -523,8 +532,8 @@ label {
   color: #fff;
   border: none;
   border-radius: 50%;
-  width: 60px;
-  height: 60px;
+  width: 45px;
+  height: 45px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -533,6 +542,7 @@ label {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   transition: transform 0.2s, box-shadow 0.2s;
   z-index: 1200;
+  
 }
 
 .cart-badge-btn:hover {
@@ -543,13 +553,13 @@ label {
 /* badge count */
 .badge {
   position: absolute;
-  top: -8px;
-  right: -8px;
+  top: -12px;
+  right: -10px;
   background: #f33;
   color: #fff;
   border-radius: 50%;
-  padding: 4px 8px;
-  font-size: 0.8rem;
+  padding: 6px 8px;
+  font-size: 0.6rem;
   font-weight: 700;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
 }
@@ -703,7 +713,9 @@ label>input[type="checkbox"] {
   }
 
   .filter-head {
-    padding: 10px 12px;
+    padding: 1.5rem;
+    max-height: 32px;
+    top:12px
   }
 
   /* keep filter action buttons side-by-side on mobile (two columns) */
@@ -805,4 +817,56 @@ label>input[type="checkbox"] {
 .page-head-wrapper{
   position:relative;
   top:-80px;
+}
+
+.cart-actions-row{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #ffff;
+  .btn.primary{
+    padding: 8px 12px;
+    font-size: 0.9rem;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s, box-shadow 0.2s;
+    svg{
+      font-size:1rem;
+      position: relative;
+      top:3px;
+      
+    }
+
+  }
+  .btn.cancel{
+    padding: 8px 12px;
+    font-size: 0.9rem;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+}
+
+.cart-icon{
+  position: relative;
+  top:3px;
+  font-size:1.3rem ;
+
+}
+.details-overlay.open{
+  .details-content{
+    .qty-controls{
+      display: none;
+    }
+  }
+}
+.cart-footer{
+  .cart-total{
+    text-align: center;
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin-bottom: 6px;
+    border: 1px solid var(--card-border);
+
+  }
 }

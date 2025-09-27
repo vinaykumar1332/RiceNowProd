@@ -188,15 +188,15 @@ body {
 }
 
 .nav-link:hover {
-  background: var(--button-bg);
+
   color: var(--brand-primary);
 }
 
 .nav-link.active {
-  background: var(--button-bg);
+
   color: var(--brand-primary);
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.15);
+
 }
 
 /* === Search Bar === */
