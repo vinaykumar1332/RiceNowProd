@@ -1,9 +1,7 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import "./Hero.css";
-
-
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -15,6 +13,14 @@ export default function Hero() {
   const productRef = useRef(null);
   const overlayRef = useRef(null);
   const canvasRef = useRef(null);
+
+  const images = [
+    "/images/home/hero/hero1.webp",
+    "/images/home/hero/hero2.webp",
+    "/images/home/hero/hero3.webp"
+  ];
+
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   useEffect(() => {
     const canvasEl = canvasRef.current;
@@ -365,11 +371,29 @@ export default function Hero() {
       });
     }, containerRef);
 
+    // Image cycling with smooth fade transition
+    const interval = setInterval(() => {
+      gsap.to(productRef.current, {
+        opacity: 0,
+        duration: 0.5,
+        ease: "power2.out",
+        onComplete: () => {
+          setCurrentImageIndex((prev) => (prev + 1) % images.length);
+          gsap.to(productRef.current, {
+            opacity: 1,
+            duration: 0.5,
+            ease: "power2.in",
+          });
+        },
+      });
+    }, 5000);
+
     // Resize event
     window.addEventListener("resize", resizeCanvas);
 
     // Cleanup
     return () => {
+      clearInterval(interval);
       window.removeEventListener("resize", resizeCanvas);
       ScrollTrigger.getAll().forEach((t) => t.kill());
       ctx.revert();
@@ -404,8 +428,8 @@ export default function Hero() {
         <div className="rn-hero-media" aria-hidden="false">
           <img
             ref={productRef}
-            src="/images/home/hero/hero1.png"
-            alt="Basmati rice pack and bowl"
+            src={images[currentImageIndex]}
+            alt="Rice pack and bowl"
             className="rn-hero-image"
             draggable="false"
             loading="lazy"

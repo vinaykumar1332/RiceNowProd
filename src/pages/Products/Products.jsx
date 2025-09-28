@@ -10,14 +10,12 @@ import Search from "./Search/Search";
 import { VITE_PRODUCTS_API } from "../../API";
 import { MdOutlineShoppingCartCheckout } from "react-icons/md";
 import { cleanTags } from "../../utils/helpers";
-import Image from "./Images/Image"; // <-- make sure this path & casing match your file
+import Image from "./Images/Image"; // ensure path/casing matches your file
 
 const PRODUCTS_API = VITE_PRODUCTS_API;
 
 /* -----------------------
    Tiny cookie helper (client-side only)
-   Note: cookies set this way are NOT HttpOnly or secure by default.
-   Use server-side sessions for secure, tamper resistant storage.
    ----------------------- */
 function setCookie(name, value, days = 1) {
   try {
@@ -26,7 +24,64 @@ function setCookie(name, value, days = 1) {
     const expires = "expires=" + d.toUTCString();
     document.cookie = `${name}=${encodeURIComponent(value)};${expires};path=/`;
   } catch (e) {
-    // ignore cookie failures
+    // handle failure (log) instead of silently ignoring
+    // cookies may fail in strict privacy contexts
+    // eslint-disable-next-line no-console
+    console.warn("setCookie failed:", e);
+  }
+}
+
+/* ---------- small helpers ---------- */
+const isFullUrl = (str) =>
+  typeof str === "string" && /^(https?:\/\/|data:|blob:)/i.test(String(str).trim());
+
+/**
+ * Given a product-image candidate (may be array, object, id, or url),
+ * return an object { imageUrl, imageId } suitable to pass to the Image component.
+ */
+function resolveImageCandidate(candidate) {
+  if (!candidate) return { imageUrl: null, imageId: null };
+
+  if (Array.isArray(candidate) && candidate.length > 0) candidate = candidate[0];
+
+  if (typeof candidate === "object") {
+    // common property names for objects
+    const possible = candidate.url || candidate.src || candidate.drive_image_id || candidate.imageId || candidate.id;
+    if (possible) return resolveImageCandidate(possible);
+    if (candidate.full || candidate.large || candidate.medium) return resolveImageCandidate(candidate.full || candidate.large || candidate.medium);
+    return { imageUrl: null, imageId: null };
+  }
+
+  const s = String(candidate).trim();
+  if (!s) return { imageUrl: null, imageId: null };
+  if (isFullUrl(s)) return { imageUrl: s, imageId: null };
+
+  // treat as an id; Image component should know how to handle ids/tokens
+  return { imageUrl: null, imageId: s };
+}
+
+/**
+ * Stable key generator for products.
+ * Uses available identifiers; if none exist, falls back to a hash of JSON.
+ */
+function computeStableKey(product) {
+  const id = product.id ?? product.sku ?? product.slug ?? null;
+  if (id) return String(id);
+  if (product.title) return `title:${String(product.title).slice(0, 64)}`;
+  // fallback deterministic hash (simple)
+  try {
+    const s = JSON.stringify(product);
+    let h = 0;
+    for (let i = 0; i < s.length; i++) {
+      // simple string hash (deterministic)
+      h = (h << 5) - h + s.charCodeAt(i);
+      h |= 0;
+    }
+    return `hash:${Math.abs(h)}`;
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.warn("computeStableKey failed:", e);
+    return `prod-${Math.random().toString(36).slice(2, 9)}`;
   }
 }
 
@@ -56,23 +111,42 @@ function CartDrawer({ open, onClose, items, onInc, onDec, onRemove, onCheckout }
         {items.length === 0 ? (
           <div className="cart-empty">No items added</div>
         ) : (
-          items.map((it, i) => {
-            const cartKey = `${String(it.id ?? it.sku ?? it.title ?? "cart")}-${i}`;
+          items.map((it) => {
+            // use stable key attached during fetch normalization
+            const cartKey = it._key ?? computeStableKey(it);
+
+            // determine best image candidate from normalized property (set in fetch)
+            const candidate =
+              it._imageCandidate ??
+              (it.images && it.images[0]) ??
+              it.image ??
+              it.image_id ??
+              it.drive_image_id ??
+              it.driveId ??
+              it.id ??
+              null;
+
+            const { imageUrl, imageId } = resolveImageCandidate(candidate);
+
             return (
               <div className="cart-item" key={cartKey}>
                 <div className="cart-item-left">
-                  <div
-                    className="cart-thumb"
-                    style={{
-                      backgroundImage: `url(${(it.images && it.images[0]) || it.image || ""})`,
-                    }}
-                    role="img"
-                    aria-label={it.title}
-                  />
-                  <div className="cart-item-meta">
-                    <div className="cart-title">{it.title}</div>
-                    <div className="cart-meta">
-                      ₹{Number(it.offer_price ?? it.price ?? 0).toFixed(2)} • {it.weight || "—"} • Qty: {it.qty}
+                  <div className="cart-item-wrapper">
+                    <div className="cart-thumb" aria-hidden="true">
+                      <Image
+                        imageUrl={imageUrl}
+                        imageId={imageId}
+                        alt={it.title || "Product image"}
+                        size={160}
+                        className="cart-thumb-image"
+                        style={{ width: 80, height: 80, borderRadius: 6, objectFit: "cover" }}
+                      />
+                    </div>
+                    <div className="cart-item-meta">
+                      <div className="cart-title">{it.title}</div>
+                      <div className="cart-meta">
+                        ₹{Number(it.offer_price ?? it.price ?? 0).toFixed(2)} • {it.weight || "—"} • Qty: {it.qty}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -142,7 +216,7 @@ function FilterPanel({ open, onClose, filters, current, setCurrent, onReset }) {
   );
 
   const brands = useMemo(() => Array.from(filters.brands || []), [filters.brands]);
-  const kgOptions = useMemo(() => Array.from(filters.kgs || []), [filters.kgs]); // e.g. "250g", "500g", "1kg"
+  const kgOptions = useMemo(() => Array.from(filters.kgs || []), [filters.kgs]);
 
   return (
     <div className={`filter-panel ${open ? "open" : ""}`} aria-hidden={!open}>
@@ -199,6 +273,7 @@ function FilterPanel({ open, onClose, filters, current, setCurrent, onReset }) {
                   });
                 }}
                 type="button"
+                aria-pressed={current.tags?.includes(tag) ? "true" : "false"}
               >
                 {tag}
               </button>
@@ -291,7 +366,7 @@ function ProductDetailsOverlay({ product, onClose, onAdd, onRemove, qty }) {
   // Normalize image list
   const imageListBase = Array.isArray(images) && images.length ? images.slice() : image ? [image] : [];
   if (imageListBase.length === 0) {
-    const extra = product.image_id ?? product.drive_image_id ?? product.driveId ?? null;
+    const extra = product.image_id ?? product.drive_image_id ?? product.driveId ?? product.id ?? null;
     if (extra) imageListBase.push(extra);
   }
 
@@ -302,7 +377,6 @@ function ProductDetailsOverlay({ product, onClose, onAdd, onRemove, qty }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [imageListBase.length]);
 
-  // keyboard support
   useEffect(() => {
     const onKey = (e) => {
       if (!product) return;
@@ -319,7 +393,6 @@ function ProductDetailsOverlay({ product, onClose, onAdd, onRemove, qty }) {
   }, [product, imageListBase.length, onClose]);
 
   if (imageListBase.length === 0) {
-    // fallback UI when no images
     const tagList = cleanTags(tags, tags_array);
     return (
       <div className="details-overlay open" onClick={onClose}>
@@ -371,8 +444,6 @@ function ProductDetailsOverlay({ product, onClose, onAdd, onRemove, qty }) {
     setIndex(i);
   };
 
-  const isFullUrl = (str) => typeof str === "string" && /^(https?:\/\/|data:|blob:)/i.test(str.trim());
-
   const tagList = cleanTags(tags, tags_array);
 
   return (
@@ -381,7 +452,7 @@ function ProductDetailsOverlay({ product, onClose, onAdd, onRemove, qty }) {
         <button type="button" className="drawer-close" onClick={onClose} aria-label="Close details">✕</button>
 
         <div className="carousel-wrap">
-          <button className="carousel-nav left" onClick={goPrev} aria-label="Previous image">‹</button>
+          <button className="carousel-nav left" onClick={goPrev} aria-label="Previous image" type="button">‹</button>
 
           <div className="carousel-main">
             <Image
@@ -394,13 +465,13 @@ function ProductDetailsOverlay({ product, onClose, onAdd, onRemove, qty }) {
             />
           </div>
 
-          <button className="carousel-nav right" onClick={goNext} aria-label="Next image">›</button>
+          <button className="carousel-nav right" onClick={goNext} aria-label="Next image" type="button">›</button>
         </div>
 
         <div className="carousel-thumbs" role="tablist" aria-label="Image thumbnails">
           {imageListBase.map((img, i) => (
             <button
-              key={String(img) + "-" + i}
+              key={`${String(img)}-${i}`}
               type="button"
               className={`thumb-btn ${i === index ? "active" : ""}`}
               onClick={jumpTo(i)}
@@ -467,7 +538,10 @@ export default function Products() {
     try {
       const s = JSON.parse(sessionStorage.getItem("cart") || "[]");
       return Array.isArray(s) ? s : [];
-    } catch {
+    } catch (e) {
+      // handle parse error
+      // eslint-disable-next-line no-console
+      console.warn("Failed to parse persisted cart:", e);
       return [];
     }
   });
@@ -506,6 +580,7 @@ export default function Products() {
     if (Array.isArray(data?.products)) return data.products;
     if (Array.isArray(data?.rows)) return data.rows;
     if (Array.isArray(data?.data)) return data.data;
+    // eslint-disable-next-line no-console
     console.warn("Unexpected data shape from products API", data);
     return [];
   };
@@ -518,7 +593,12 @@ export default function Products() {
       const key = String(r.id ?? r.sku ?? r.slug ?? r.title ?? JSON.stringify(r));
       if (!seen.has(key)) {
         seen.add(key);
-        out.push(r);
+        // attach stable key and normalized image candidate for downstream usage
+        const normalized = { ...r, _key: computeStableKey(r) };
+        // pick likely image candidate fields
+        normalized._imageCandidate =
+          (r.images && r.images[0]) ?? r.image ?? r.image_id ?? r.drive_image_id ?? r.driveId ?? r.id ?? null;
+        out.push(normalized);
       }
     }
     return out;
@@ -603,7 +683,7 @@ export default function Products() {
     fetch(PRODUCTS_API, { method: "GET", mode: "cors", headers: { Accept: "application/json" }, credentials: "omit" })
       .then(async (res) => {
         if (!res.ok) {
-          const text = await res.text();
+          const text = await res.text().catch(() => "");
           throw new Error(`Fetch error ${res.status}: ${text}`);
         }
         return res.json();
@@ -627,6 +707,8 @@ export default function Products() {
         setCurrentFilter((c) => ({ ...c, maxPrice: processed.maxPrice }));
       })
       .catch((err) => {
+        // handle error explicitly
+        // eslint-disable-next-line no-console
         console.error("Failed to fetch products", err);
         setError(err.message || "Failed to fetch products");
       })
@@ -772,11 +854,12 @@ export default function Products() {
   };
 
   useEffect(() => {
-    // persist cart to sessionStorage as a fallback (keeps across reloads)
     try {
       sessionStorage.setItem("cart", JSON.stringify(cart));
     } catch (e) {
-      // ignore
+      // don't swallow - log
+      // eslint-disable-next-line no-console
+      console.warn("Failed to persist cart:", e);
     }
   }, [cart]);
 
@@ -804,14 +887,14 @@ export default function Products() {
   const handleCheckout = () => {
     try {
       const cartCopy = JSON.parse(JSON.stringify(cart));
-      // sessionStorage fallback
       sessionStorage.setItem("cart", JSON.stringify(cartCopy));
-      // cookie fallback (1 day)
       setCookie("rice_cart", JSON.stringify(cartCopy), 1);
-      // navigate to checkout route with state
       navigate("/checkout", { state: { cart: cartCopy } });
     } catch (err) {
+      // show and log error
+      // eslint-disable-next-line no-console
       console.error("Failed to prepare checkout", err);
+      setError("Failed to prepare checkout. Please try again.");
     }
   };
 
@@ -854,7 +937,7 @@ export default function Products() {
           {loading && (
             <div className="cards-parent" aria-busy="true">
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="card skeleton">
+                <div key={`skeleton-${i}`} className="card skeleton">
                   <div className="card-media skel-media" />
                   <div className="card-body">
                     <div className="skel-line medium" />
@@ -867,7 +950,7 @@ export default function Products() {
           )}
 
           {!loading && error && (
-            <div className="error-box">
+            <div className="error-box" role="alert" aria-live="assertive">
               <div className="error-title">Error: {error}</div>
               <div className="error-actions">
                 <button type="button" className="btn primary" onClick={fetchProducts}>Try again</button>
@@ -884,9 +967,8 @@ export default function Products() {
           {!loading && !error && products.length > 0 && (
             <div className="products-section-wrapper" style={{ marginTop: 12 }}>
               <div className="cards-parent">
-                {products.map((p, idx) => {
-                  const base = String(p.id ?? p.sku ?? p.slug ?? p.title ?? "product");
-                  const stableKey = `${base}-${idx}`;
+                {products.map((p) => {
+                  const stableKey = p._key ?? computeStableKey(p);
                   return (
                     <Cards
                       key={stableKey}

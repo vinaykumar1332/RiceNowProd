@@ -530,12 +530,12 @@ label {
   position: fixed;
   bottom: 20px;
   right: 20px;
-  background: var(--brand-primary);
+  background: var(--accent-color);
   color: #fff;
   border: none;
   border-radius: 50%;
-  width: 45px;
-  height: 45px;
+  width: 50px;
+  height: 50px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -560,7 +560,7 @@ label {
   background: #f33;
   color: #fff;
   border-radius: 50%;
-  padding: 6px 8px;
+  padding: 7px 10px;
   font-size: 0.6rem;
   font-weight: 700;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
@@ -961,5 +961,20 @@ label>input[type="checkbox"] {
     color: #444;
     margin-top: 8px;
     margin-bottom: 10px;
+  }
+}
+.cart-item-wrapper{
+  display: flex;
+  flex-direction: row;
+  .lazy-image-wrapper.cart-thumb-image{
+   width: 77px;
+  position: absolute;
+ height: 59px;
+  object-fit: cover;
+     img{
+      height: 100%;
+      width: 100%;
+      object-fit: contain;
+     }
   }
 }
