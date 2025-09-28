@@ -1,6 +1,7 @@
 /* Hero.css - Hero styles (green / kind theme) */
-.home-page-container{
-
+.home-page-container {
+  /* Assuming this was meant to be a wrapper; if not needed, can be removed */
+}
 
 /* Container */
 .rn-hero-section {
@@ -121,7 +122,7 @@
   pointer-events: none;
   overflow: visible;
   z-index: 4;
-  left:-15px;
+  left: -15px;
 }
 
 /* Main image */
@@ -184,12 +185,14 @@
   .rn-hero-media {
     order: -1;
     margin-bottom: 0.6rem;
+    left: -27px;
   }
 
   .rn-hero-image {
     max-width: 360px;
     padding: 12px;
     transform: translateY(0) translateX(0);
+    transition: transform 0.5s ease, opacity 0.5s ease; /* Adjusted for slide transition */
   }
 
   .rn-hero-title {
@@ -227,5 +230,4 @@
     animation: none !important;
     transform: none !important;
   }
-}
 }
