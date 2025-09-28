@@ -5,6 +5,9 @@ html, body, #root { height: 100%; }
 
 main{
     padding-top: 100px;
+    @media (max-width:576px) {
+       padding-top: 60px; 
+    }
 }
 html{
    -font-family: "Inter", "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
