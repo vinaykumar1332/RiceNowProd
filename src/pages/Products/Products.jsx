@@ -1,5 +1,5 @@
 // src/components/Products/Products.jsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import PropTypes from "prop-types";
 import { useNavigate } from "react-router-dom";
 import Cards from "./cards/cards";
@@ -14,9 +14,7 @@ import Image from "./Images/Image"; // ensure path/casing matches your file
 
 const PRODUCTS_API = VITE_PRODUCTS_API;
 
-/* -----------------------
-   Tiny cookie helper (client-side only)
-   ----------------------- */
+/* ---------- small helpers ---------- */
 function setCookie(name, value, days = 1) {
   try {
     const d = new Date();
@@ -24,62 +22,26 @@ function setCookie(name, value, days = 1) {
     const expires = "expires=" + d.toUTCString();
     document.cookie = `${name}=${encodeURIComponent(value)};${expires};path=/`;
   } catch (e) {
-    // handle failure (log) instead of silently ignoring
-    // cookies may fail in strict privacy contexts
-    // eslint-disable-next-line no-console
     console.warn("setCookie failed:", e);
   }
 }
 
-/* ---------- small helpers ---------- */
 const isFullUrl = (str) =>
   typeof str === "string" && /^(https?:\/\/|data:|blob:)/i.test(String(str).trim());
 
-/**
- * Given a product-image candidate (may be array, object, id, or url),
- * return an object { imageUrl, imageId } suitable to pass to the Image component.
- */
-function resolveImageCandidate(candidate) {
-  if (!candidate) return { imageUrl: null, imageId: null };
-
-  if (Array.isArray(candidate) && candidate.length > 0) candidate = candidate[0];
-
-  if (typeof candidate === "object") {
-    // common property names for objects
-    const possible = candidate.url || candidate.src || candidate.drive_image_id || candidate.imageId || candidate.id;
-    if (possible) return resolveImageCandidate(possible);
-    if (candidate.full || candidate.large || candidate.medium) return resolveImageCandidate(candidate.full || candidate.large || candidate.medium);
-    return { imageUrl: null, imageId: null };
-  }
-
-  const s = String(candidate).trim();
-  if (!s) return { imageUrl: null, imageId: null };
-  if (isFullUrl(s)) return { imageUrl: s, imageId: null };
-
-  // treat as an id; Image component should know how to handle ids/tokens
-  return { imageUrl: null, imageId: s };
-}
-
-/**
- * Stable key generator for products.
- * Uses available identifiers; if none exist, falls back to a hash of JSON.
- */
 function computeStableKey(product) {
   const id = product.id ?? product.sku ?? product.slug ?? null;
   if (id) return String(id);
   if (product.title) return `title:${String(product.title).slice(0, 64)}`;
-  // fallback deterministic hash (simple)
   try {
     const s = JSON.stringify(product);
     let h = 0;
     for (let i = 0; i < s.length; i++) {
-      // simple string hash (deterministic)
       h = (h << 5) - h + s.charCodeAt(i);
       h |= 0;
     }
     return `hash:${Math.abs(h)}`;
   } catch (e) {
-    // eslint-disable-next-line no-console
     console.warn("computeStableKey failed:", e);
     return `prod-${Math.random().toString(36).slice(2, 9)}`;
   }
@@ -112,20 +74,9 @@ function CartDrawer({ open, onClose, items, onInc, onDec, onRemove, onCheckout }
           <div className="cart-empty">No items added</div>
         ) : (
           items.map((it) => {
-            // use stable key attached during fetch normalization
             const cartKey = it._key ?? computeStableKey(it);
-
-            // determine best image candidate from normalized property (set in fetch)
             const candidate =
-              it._imageCandidate ??
-              (it.images && it.images[0]) ??
-              it.image ??
-              it.image_id ??
-              it.drive_image_id ??
-              it.driveId ??
-              it.id ??
-              null;
-
+              it._imageCandidate ?? (it.images && it.images[0]) ?? it.image ?? it.image_id ?? it.drive_image_id ?? it.driveId ?? it.id ?? null;
             const { imageUrl, imageId } = resolveImageCandidate(candidate);
 
             return (
@@ -139,7 +90,6 @@ function CartDrawer({ open, onClose, items, onInc, onDec, onRemove, onCheckout }
                         alt={it.title || "Product image"}
                         size={160}
                         className="cart-thumb-image"
-                        style={{ width: 80, height: 80, borderRadius: 6, objectFit: "cover" }}
                       />
                     </div>
                     <div className="cart-item-meta">
@@ -363,7 +313,6 @@ function ProductDetailsOverlay({ product, onClose, onAdd, onRemove, qty }) {
 
   const { title, description, images, image, weight, tags, tags_array, brand } = product;
 
-  // Normalize image list
   const imageListBase = Array.isArray(images) && images.length ? images.slice() : image ? [image] : [];
   if (imageListBase.length === 0) {
     const extra = product.image_id ?? product.drive_image_id ?? product.driveId ?? product.id ?? null;
@@ -374,8 +323,7 @@ function ProductDetailsOverlay({ product, onClose, onAdd, onRemove, qty }) {
 
   useEffect(() => {
     if (index >= imageListBase.length) setIndex(Math.max(0, imageListBase.length - 1));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [imageListBase.length]);
+  }, [imageListBase.length, index]);
 
   useEffect(() => {
     const onKey = (e) => {
@@ -526,7 +474,85 @@ ProductDetailsOverlay.propTypes = {
   qty: PropTypes.number.isRequired,
 };
 
+/* ---------- Image candidate resolver (used by CartDrawer etc) ---------- */
+function resolveImageCandidate(candidate) {
+  if (!candidate) return { imageUrl: null, imageId: null };
+
+  if (Array.isArray(candidate) && candidate.length > 0) candidate = candidate[0];
+
+  if (typeof candidate === "object") {
+    const possible = candidate.url || candidate.src || candidate.drive_image_id || candidate.imageId || candidate.id;
+    if (possible) return resolveImageCandidate(possible);
+    if (candidate.full || candidate.large || candidate.medium) return resolveImageCandidate(candidate.full || candidate.large || candidate.medium);
+    return { imageUrl: null, imageId: null };
+  }
+
+  const s = String(candidate).trim();
+  if (!s) return { imageUrl: null, imageId: null };
+  if (isFullUrl(s)) return { imageUrl: s, imageId: null };
+  return { imageUrl: null, imageId: s };
+}
+
 /* ---------- Main Products component ---------- */
+
+/* ---------- CACHING HELPERS (localStorage) ---------- */
+const CACHE_KEY = "rice_products_cache_v1";
+const CACHE_META_KEY = "rice_products_meta_v1";
+const DEFAULT_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+function readLocalJSON(key) {
+  try {
+    const v = localStorage.getItem(key);
+    if (!v) return null;
+    return JSON.parse(v);
+  } catch (err) {
+    console.warn("readLocalJSON failed", key, err);
+    return null;
+  }
+}
+function writeLocalJSON(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (err) {
+    console.warn("writeLocalJSON failed", key, err);
+  }
+}
+function removeLocal(key) {
+  try {
+    localStorage.removeItem(key);
+  } catch (err) {
+    // ignore
+  }
+}
+function simpleHash(str) {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h += (h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24);
+    h = h >>> 0;
+  }
+  return h.toString(36);
+}
+function readCachedProducts() {
+  const data = readLocalJSON(CACHE_KEY);
+  const meta = readLocalJSON(CACHE_META_KEY);
+  if (!data || !meta) return null;
+  return { data, meta };
+}
+function writeCachedProducts(data, meta = {}) {
+  writeLocalJSON(CACHE_KEY, data);
+  const finalMeta = {
+    ...(readLocalJSON(CACHE_META_KEY) || {}),
+    ...meta,
+    fetchedAt: Date.now(),
+  };
+  writeLocalJSON(CACHE_META_KEY, finalMeta);
+}
+function invalidateCache() {
+  removeLocal(CACHE_KEY);
+  removeLocal(CACHE_META_KEY);
+}
+
 export default function Products() {
   const navigate = useNavigate();
 
@@ -539,8 +565,6 @@ export default function Products() {
       const s = JSON.parse(sessionStorage.getItem("cart") || "[]");
       return Array.isArray(s) ? s : [];
     } catch (e) {
-      // handle parse error
-      // eslint-disable-next-line no-console
       console.warn("Failed to parse persisted cart:", e);
       return [];
     }
@@ -580,7 +604,6 @@ export default function Products() {
     if (Array.isArray(data?.products)) return data.products;
     if (Array.isArray(data?.rows)) return data.rows;
     if (Array.isArray(data?.data)) return data.data;
-    // eslint-disable-next-line no-console
     console.warn("Unexpected data shape from products API", data);
     return [];
   };
@@ -593,9 +616,7 @@ export default function Products() {
       const key = String(r.id ?? r.sku ?? r.slug ?? r.title ?? JSON.stringify(r));
       if (!seen.has(key)) {
         seen.add(key);
-        // attach stable key and normalized image candidate for downstream usage
         const normalized = { ...r, _key: computeStableKey(r) };
-        // pick likely image candidate fields
         normalized._imageCandidate =
           (r.images && r.images[0]) ?? r.image ?? r.image_id ?? r.drive_image_id ?? r.driveId ?? r.id ?? null;
         out.push(normalized);
@@ -671,27 +692,27 @@ export default function Products() {
     };
   };
 
-  const fetchProducts = () => {
+  /* ---------- CACHED FETCH ---------- */
+  const fetchProducts = useCallback(async (opts = {}) => {
+    const useTTLMs = opts.useTTLMs ?? DEFAULT_CACHE_TTL_MS;
+    const force = opts.force ?? false;
+
     setLoading(true);
     setError(null);
+
     if (!PRODUCTS_API) {
       setError("Products API not configured.");
       setLoading(false);
       return;
     }
 
-    fetch(PRODUCTS_API, { method: "GET", mode: "cors", headers: { Accept: "application/json" }, credentials: "omit" })
-      .then(async (res) => {
-        if (!res.ok) {
-          const text = await res.text().catch(() => "");
-          throw new Error(`Fetch error ${res.status}: ${text}`);
-        }
-        return res.json();
-      })
-      .then((data) => {
-        const rows = extractProducts(data);
-        const uniqueRows = dedupeByKey(rows);
+    try {
+      const cached = readCachedProducts();
+      const now = Date.now();
 
+      if (cached && !force) {
+        const rows = extractProducts(cached.data);
+        const uniqueRows = dedupeByKey(rows);
         setRaw(uniqueRows);
         setProducts(uniqueRows);
 
@@ -703,23 +724,120 @@ export default function Products() {
           minPrice: processed.minPrice,
           maxPrice: processed.maxPrice,
         });
-
         setCurrentFilter((c) => ({ ...c, maxPrice: processed.maxPrice }));
-      })
-      .catch((err) => {
-        // handle error explicitly
-        // eslint-disable-next-line no-console
-        console.error("Failed to fetch products", err);
-        setError(err.message || "Failed to fetch products");
-      })
-      .finally(() => setLoading(false));
-  };
+
+        const age = now - (cached.meta?.fetchedAt || 0);
+        if (age <= useTTLMs) {
+          setLoading(false);
+          return;
+        }
+      }
+
+      const meta = (cached && cached.meta) || {};
+      const headers = new Headers();
+      headers.set("Accept", "application/json");
+      if (meta.etag) headers.set("If-None-Match", meta.etag);
+      if (meta.lastModified) headers.set("If-Modified-Since", meta.lastModified);
+
+      const res = await fetch(PRODUCTS_API, {
+        method: "GET",
+        mode: "cors",
+        credentials: "omit",
+        headers,
+      });
+
+      if (res.status === 304) {
+        writeCachedProducts(cached.data, {
+          fetchedAt: Date.now(),
+        });
+        setLoading(false);
+        return;
+      }
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        const msg = `Fetch error ${res.status}${text ? `: ${text}` : ""}`;
+        if (cached && cached.data) {
+          console.warn(msg, " — serving cached data");
+          setLoading(false);
+          return;
+        }
+        throw new Error(msg);
+      }
+
+      const data = await res.json();
+
+      let responseText = null;
+      try {
+        responseText = JSON.stringify(data);
+      } catch (err) {
+        responseText = null;
+      }
+      const responseHash = responseText ? simpleHash(responseText) : null;
+
+      const newEtag = res.headers.get("ETag") || null;
+      const lastModified = res.headers.get("Last-Modified") || null;
+
+      const prevHash = cached?.meta?.hash || null;
+      const prevEtag = cached?.meta?.etag || null;
+
+      const isSameByEtag = newEtag && prevEtag && newEtag === prevEtag;
+      const isSameByHash = prevHash && responseHash && prevHash === responseHash;
+
+      if (isSameByEtag || isSameByHash) {
+        writeCachedProducts(cached ? cached.data : data, {
+          etag: newEtag,
+          lastModified,
+          hash: responseHash || prevHash || null,
+          fetchedAt: Date.now(),
+        });
+        setLoading(false);
+        return;
+      }
+
+      const rows = extractProducts(data);
+      const uniqueRows = dedupeByKey(rows);
+
+      setRaw(uniqueRows);
+      setProducts(uniqueRows);
+
+      const processed = processFilters(uniqueRows);
+      setFilters({
+        brands: processed.brands,
+        kgs: processed.kgs,
+        tags: processed.tags,
+        minPrice: processed.minPrice,
+        maxPrice: processed.maxPrice,
+      });
+
+      setCurrentFilter((c) => ({ ...c, maxPrice: processed.maxPrice }));
+
+      writeCachedProducts(data, {
+        etag: newEtag,
+        lastModified,
+        hash: responseHash,
+        fetchedAt: Date.now(),
+      });
+    } catch (err) {
+      console.error("Failed to fetch products", err);
+      setError(err.message || "Failed to fetch products");
+      const cached = readCachedProducts();
+      if (cached && cached.data) {
+        const rows = extractProducts(cached.data);
+        const uniqueRows = dedupeByKey(rows);
+        setRaw(uniqueRows);
+        setProducts(uniqueRows);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [setProducts, setRaw, setFilters, setCurrentFilter]);
 
   useEffect(() => {
-    fetchProducts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    fetchProducts({ useTTLMs: DEFAULT_CACHE_TTL_MS, force: false });
+  }, [fetchProducts]);
 
+  /* ---------- Filtering / search ---------- */
   useEffect(() => {
     const q = (searchQuery || "").trim().toLowerCase();
 
@@ -857,8 +975,6 @@ export default function Products() {
     try {
       sessionStorage.setItem("cart", JSON.stringify(cart));
     } catch (e) {
-      // don't swallow - log
-      // eslint-disable-next-line no-console
       console.warn("Failed to persist cart:", e);
     }
   }, [cart]);
@@ -883,7 +999,6 @@ export default function Products() {
     });
   };
 
-  /* ---------- Checkout handler (writes cookie + sessionStorage + navigates) ---------- */
   const handleCheckout = () => {
     try {
       const cartCopy = JSON.parse(JSON.stringify(cart));
@@ -891,14 +1006,11 @@ export default function Products() {
       setCookie("rice_cart", JSON.stringify(cartCopy), 1);
       navigate("/checkout", { state: { cart: cartCopy } });
     } catch (err) {
-      // show and log error
-      // eslint-disable-next-line no-console
       console.error("Failed to prepare checkout", err);
       setError("Failed to prepare checkout. Please try again.");
     }
   };
 
-  /* ---------- Render ---------- */
   return (
     <div className="page products-page-wrapper">
       <div className="page-head-wrapper">
@@ -953,7 +1065,7 @@ export default function Products() {
             <div className="error-box" role="alert" aria-live="assertive">
               <div className="error-title">Error: {error}</div>
               <div className="error-actions">
-                <button type="button" className="btn primary" onClick={fetchProducts}>Try again</button>
+                <button type="button" className="btn primary" onClick={() => fetchProducts({ force: true })}>Try again</button>
               </div>
             </div>
           )}

@@ -1,3 +1,4 @@
+// src/components/Products/cards/cards.jsx
 import React, { useMemo, useState } from "react";
 import PropTypes from "prop-types";
 import "./cards.css";
@@ -12,7 +13,7 @@ const MemoizedCards = React.memo(function Cards({
   qty = 0,
   onOpenDetails = () => {},
 }) {
-  const [expanded, setExpanded] = useState(false); // local overlay state
+  const [expanded, setExpanded] = useState(false);
 
   const {
     title = "Untitled product",
@@ -30,7 +31,6 @@ const MemoizedCards = React.memo(function Cards({
     category = "Unknown",
   } = product;
 
-  // Determine candidate image (prefer images array -> image -> known id fields)
   const rawCandidate = useMemo(() => {
     return (
       (Array.isArray(images) && images.length && images[0]) ||
@@ -42,13 +42,11 @@ const MemoizedCards = React.memo(function Cards({
     );
   }, [images, image, product]);
 
-  // Heuristic to check if candidate is a full url or a drive id
   const isFullUrl = useMemo(() => {
     if (!rawCandidate || typeof rawCandidate !== "string") return false;
     return /^(https?:\/\/|data:|blob:)/i.test(rawCandidate.trim());
   }, [rawCandidate]);
 
-  // If image list is present (array of urls/ids), prepare that array for other uses (overlay etc.)
   const imageList = useMemo(
     () =>
       Array.isArray(images) && images.length
@@ -65,7 +63,6 @@ const MemoizedCards = React.memo(function Cards({
   const isActive = String(active ?? stock ?? "").toLowerCase() === "active";
   const displayWeight = weight || (Array.isArray(weights) ? weights.join(", ") : "—");
 
-  // compute percent off if both present and numeric
   const percentOff = useMemo(() => {
     const p = Number(price);
     const o = Number(offer_price ?? price);
@@ -88,20 +85,16 @@ const MemoizedCards = React.memo(function Cards({
       <div className="card-media">
         <div className="media-figure" role="img" aria-label={title} onClick={() => onOpenDetails(product)} style={{ cursor: "pointer" }}>
           {imageList.length ? (
-            // Use Image component - pass imageUrl for full URLs, imageId for Drive IDs
             <Image
               imageUrl={isFullUrl ? rawCandidate : null}
               imageId={isFullUrl ? null : rawCandidate}
               alt={title}
-              size={300}
               className="card-img"
-              style={{ width: "100%", height: 180 }}
             />
           ) : (
             <div className="image-placeholder">No image</div>
           )}
 
-          {/* Offer badge (top-right) */}
           {percentOff ? (
             <div className="offer-badge offer-badge-right" aria-hidden={false}>
               <div className="offer-percentage">{percentOff}%</div>
@@ -187,7 +180,6 @@ const MemoizedCards = React.memo(function Cards({
         </div>
       </div>
 
-      {/* Details overlay inside the card */}
       {expanded && (
         <div className="details-overlay" role="dialog" aria-modal="true" id="details-panel" onClick={handleCloseOverlay}>
           <div className="details-panel" onClick={(e) => e.stopPropagation()}>
@@ -202,7 +194,6 @@ const MemoizedCards = React.memo(function Cards({
               <div className="details-body">
                 <div className="details-image-wrap">
                   {imageList.length ? (
-                    // Use Image here as well (overlay larger size)
                     <Image
                       imageUrl={isFullUrl ? rawCandidate : null}
                       imageId={isFullUrl ? null : rawCandidate}
