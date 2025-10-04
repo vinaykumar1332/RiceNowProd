@@ -1,18 +1,7 @@
+// src/components/Products/Images/Image.jsx
 import React, { useEffect, useRef, useState } from "react";
 import PropTypes from "prop-types";
 
-/**
- * Robust Image component for Drive file ids or direct URLs.
- * - imageId: google drive id string (e.g. "1gPU..."), will try thumbnail then uc fallback
- * - imageUrl: full image URL or data: URL
- * - size: numeric for Drive thumbnail sz param
- *
- * Behavior:
- * - builds candidate src on mount/update
- * - uses IntersectionObserver to lazy-load
- * - if the constructed src fails (onError), tries a fallback Drive url
- * - logs minimal debug messages to console (remove in prod)
- */
 export default function Image({ imageId, imageUrl, alt, size = 200, className = "", style = {}, placeholder }) {
   const rootRef = useRef(null);
   const [inView, setInView] = useState(false);
@@ -34,15 +23,13 @@ export default function Image({ imageId, imageUrl, alt, size = 200, className = 
   const buildUcFallback = (id) => {
     const clean = normalizeId(id);
     if (!clean) return null;
-    // This URL often works when thumbnail fails
     return `https://drive.google.com/uc?export=view&id=${encodeURIComponent(clean)}`;
   };
 
   useEffect(() => {
-    // Choose initial candidate:
     if (imageUrl && String(imageUrl).trim()) {
       setSrcCandidate(String(imageUrl).trim());
-      setTriedFallback(true); // nothing to fallback to
+      setTriedFallback(true);
       setFailed(false);
       return;
     }
@@ -72,7 +59,7 @@ export default function Image({ imageId, imageUrl, alt, size = 200, className = 
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             setInView(true);
-            try { obs.disconnect(); } catch (e) {}
+            try { obs.disconnect(); } catch (e) { /* ignore */ }
           }
         });
       },
@@ -82,7 +69,7 @@ export default function Image({ imageId, imageUrl, alt, size = 200, className = 
     obs.observe(rootRef.current);
 
     return () => {
-      try { obs.disconnect(); } catch (e) {}
+      try { obs.disconnect(); } catch (e) { /* ignore */ }
     };
   }, [rootRef]);
 
@@ -94,25 +81,20 @@ export default function Image({ imageId, imageUrl, alt, size = 200, className = 
       );
 
   const onImgError = (e) => {
-    // If we already tried fallback or there is no imageId, mark failed
     if (triedFallback) {
       setFailed(true);
       console.debug("[Image] final failure for src:", e?.target?.src);
       return;
     }
-
-    // if we haven't tried fallback and we have an imageId, try uc fallback
     if (imageId) {
       const uc = buildUcFallback(imageId);
       if (uc && uc !== srcCandidate) {
         console.debug("[Image] thumbnail failed, trying uc fallback:", uc);
         setSrcCandidate(uc);
         setTriedFallback(true);
-        // keep failed false — we'll retry with new src
         return;
       }
     }
-
     setFailed(true);
     setTriedFallback(true);
     console.debug("[Image] error and no fallback available for src:", e?.target?.src);
@@ -124,6 +106,7 @@ export default function Image({ imageId, imageUrl, alt, size = 200, className = 
     <div
       ref={rootRef}
       className={`lazy-image-wrapper ${className}`}
+      style={style}
     >
       {imgSrc ? (
         <img
@@ -131,14 +114,12 @@ export default function Image({ imageId, imageUrl, alt, size = 200, className = 
           alt={alt ?? ""}
           loading="lazy"
           onError={onImgError}
-          
         />
       ) : (
         <img
           src={defaultPlaceholder}
           alt={alt ?? ""}
           aria-hidden="true"
-          style={{ display: "block", width: "100%", height: "100%", objectFit: "cover" }}
         />
       )}
     </div>

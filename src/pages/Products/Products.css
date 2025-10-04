@@ -966,6 +966,7 @@ label>input[type="checkbox"] {
 .cart-item-wrapper{
   display: flex;
   flex-direction: row;
+  gap: 10px;
   .lazy-image-wrapper.cart-thumb-image{
    width: 77px;
   position: absolute;
