@@ -4,14 +4,9 @@ import { Link, useLocation } from "react-router-dom";
 import "./Navbar.css";
 import {
   RiHome5Line,
-  RiMailLine,
-  RiSunLine,
-  RiMoonLine,
   RiMenuLine,
   RiCloseLine,
-  RiSearchLine,
 } from "react-icons/ri";
-import usePrefersColorScheme from "../../hooks/usePrefersColorScheme";
 import { BiBowlRice } from "react-icons/bi";
 import { BsCart2 } from "react-icons/bs";
 
@@ -33,33 +28,16 @@ function keyFromPath(pathname) {
   return "home";
 }
 
-export default function Navbar({ onSearch }) {
-  const prefersDark = usePrefersColorScheme();
+export default function Navbar() {
   const location = useLocation();
 
-  const [theme, setTheme] = useState(
-    () => localStorage.getItem("theme") || (prefersDark ? "dark" : "light")
-  );
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeKey, setActiveKey] = useState(() =>
     keyFromPath(window.location.pathname)
   );
-  const [query, setQuery] = useState("");
   const navLinksRef = useRef(null);
   const mobileBtnRef = useRef(null);
   const logoRef = useRef(null);
-
-  // sync saved/system theme
-  useEffect(() => {
-    const saved = localStorage.getItem("theme");
-    if (saved) setTheme(saved);
-    else setTheme(prefersDark ? "dark" : "light");
-  }, [prefersDark]);
-
-  useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem("theme", theme);
-  }, [theme]);
 
   // sync activeKey with route changes (fixes paste-url / refresh case)
   useEffect(() => {
@@ -99,11 +77,6 @@ export default function Navbar({ onSearch }) {
     return () => logo.removeEventListener("mousemove", onMove);
   }, []);
 
-  const toggleTheme = (e) => {
-    e.stopPropagation();
-    setTheme((t) => (t === "light" ? "dark" : "light"));
-  };
-
   const handleLinkClick = (key) => {
     setActiveKey(key);
     if (window.innerWidth <= 768) setMobileOpen(false);
@@ -112,12 +85,6 @@ export default function Navbar({ onSearch }) {
   const handleMenuToggle = (e) => {
     e.stopPropagation();
     setMobileOpen((s) => !s);
-  };
-
-  const handleSearchSubmit = (e) => {
-    e.preventDefault();
-    if (onSearch) onSearch(query);
-    else console.log("Search:", query);
   };
 
   return (
@@ -152,37 +119,9 @@ export default function Navbar({ onSearch }) {
               <span className="nav-label">{ln.label}</span>
             </Link>
           ))}
-
-          <div className="nav-search-wrapper">
-            <form
-              className="nav-search search-bar"
-              role="search"
-              onSubmit={handleSearchSubmit}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <RiSearchLine className="search-icon" aria-hidden />
-              <input
-                type="search"
-                placeholder="Search..."
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                aria-label="Search"
-              />
-            </form>
-          </div>
         </div>
 
         <div className="nav-actions">
-          <button
-            className="theme-toggle"
-            aria-label="Toggle theme"
-            onClick={toggleTheme}
-            title="Toggle theme"
-          >
-            <RiSunLine className="sun-icon" />
-            <RiMoonLine className="moon-icon" />
-          </button>
-
           <button
             className="mobile-menu"
             aria-label="Menu"
