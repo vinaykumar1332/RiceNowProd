@@ -4,6 +4,7 @@ import { Link, useLocation } from "react-router-dom";
 import "./Navbar.css";
 import {
   RiHome5Line,
+  RiMailLine,
   RiMenuLine,
   RiCloseLine,
 } from "react-icons/ri";
@@ -32,9 +33,7 @@ export default function Navbar() {
   const location = useLocation();
 
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [activeKey, setActiveKey] = useState(() =>
-    keyFromPath(window.location.pathname)
-  );
+  const [activeKey, setActiveKey] = useState(keyFromPath(location.pathname));
   const navLinksRef = useRef(null);
   const mobileBtnRef = useRef(null);
   const logoRef = useRef(null);
@@ -77,8 +76,7 @@ export default function Navbar() {
     return () => logo.removeEventListener("mousemove", onMove);
   }, []);
 
-  const handleLinkClick = (key) => {
-    setActiveKey(key);
+  const handleLinkClick = () => {
     if (window.innerWidth <= 768) setMobileOpen(false);
   };
 
@@ -109,7 +107,7 @@ export default function Navbar() {
               key={ln.key}
               to={ln.to}
               className={`nav-link ${activeKey === ln.key ? "active" : ""}`}
-              onClick={() => handleLinkClick(ln.key)}
+              onClick={handleLinkClick}
               // optionally set a CSS variable for stagger delay:
               style={{ ["--delay"]: `${0.08 * (idx + 1)}s` }}
             >

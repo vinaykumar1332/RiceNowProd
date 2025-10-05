@@ -1,0 +1,289 @@
+:root {
+  --primary-green: #009977;
+  --accent: var(--primary-green);
+  --accent-foreground: #ffffff;
+  --bg-veil-start: rgba(0, 0, 0, 0.28);
+  --bg-veil-end: rgba(0, 0, 0, 0.46);
+  --hero-min-h: 60vh;
+  --hero-max-h: 100vh;
+  --slide-duration: 5s;
+  --font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  --indicator-size: 12px;
+  --indicator-space: 12px;
+  --indicator-width: 56px;
+  --indicator-height: 6px;
+}
+
+/* Container */
+.rn-hero {
+  font-family: var(--font-family);
+  position: relative;
+  width: 100%;
+  min-height: var(--hero-min-h);
+  max-height: var(--hero-max-h);
+  overflow: hidden;
+  color: #fff;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* screen reader live area (visually hidden) */
+.rn-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Slider viewport */
+.rn-slider {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+/* slide */
+.rn-slide {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transform: translateY(8px) scale(1.01);
+  transition: opacity 700ms ease, transform 700ms ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rn-slide.active {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  z-index: 2;
+}
+
+/* background cover */
+.rn-slide__bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  filter: saturate(0.95) contrast(1);
+  z-index: 1;
+}
+
+/* content centered, responsive */
+.rn-slide__inner {
+  z-index: 3;
+  position: relative;
+  max-width: 1100px;
+  width: min(94%, 1100px);
+  padding: 32px 20px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  align-items: center;
+}
+
+/* Quote: modern, italic, clamps lines */
+.rn-quote {
+  margin: 0;
+  color: #fff;
+  text-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  font-style: italic;
+  font-weight: 500;
+  line-height: 1.2;
+  max-width: 920px;
+}
+
+.rn-quote__text {
+  font-size: clamp(1rem, 2.5vw, 1.6rem); /* responsive */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin: 0;
+}
+
+/* CTA button */
+.rn-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  background: linear-gradient(180deg, var(--accent), #007f63);
+  color: var(--accent-foreground);
+  border-radius: 999px;
+  text-decoration: none;
+  font-weight: 700;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.rn-cta:hover,
+.rn-cta:focus {
+  transform: translateY(-4px);
+  box-shadow: 0 18px 56px rgba(0, 0, 0, 0.55);
+  outline: none;
+}
+
+.rn-cta__icon {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  display: none;
+}
+
+/* Navigation arrows */
+.rn-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 6;
+  background: rgba(0, 0, 0, 0.48);
+  color: #fff;
+  border: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+  cursor: pointer;
+  transition: transform 120ms ease, background 120ms ease;
+  backdrop-filter: blur(4px);
+}
+
+.rn-nav:focus {
+  outline: 2px solid rgba(255, 255, 255, 0.12);
+}
+
+.rn-nav--prev {
+  left: 18px;
+}
+
+.rn-nav--next {
+  right: 18px;
+}
+
+/* Indicators (center bottom) */
+.rn-indicators {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 18px;
+  display: flex;
+  gap: var(--indicator-space);
+  align-items: center;
+  z-index: 7;
+}
+
+/* single indicator button */
+.rn-indicator {
+  --w: var(--indicator-width);
+  --h: var(--indicator-height);
+  width: var(--w);
+  height: calc(var(--h) + 18px);
+  background: rgba(255, 255, 255, 0.04);
+  border: none;
+  border-radius: 10px;
+  padding: 6px;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.rn-indicator:focus {
+  outline: 2px solid rgba(255, 255, 255, 0.12);
+}
+
+/* dot above the progress bar — subtle */
+.rn-indicator__dot {
+  width: var(--indicator-size);
+  height: var(--indicator-size);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+}
+
+/* progress bar below dot */
+.rn-indicator__progress {
+  width: 100%;
+  height: var(--indicator-height);
+  background: linear-gradient(90deg, rgba(255,255,255,0.96), rgba(255,255,255,0.88));
+  border-radius: 6px;
+  transform-origin: left center;
+  width: 0%;
+}
+
+/* animation fill (grows width 0 -> 100%) */
+@keyframes rn-fill {
+  from { width: 0%; }
+  to { width: 100%; }
+}
+
+/* active indicator styles and running animation */
+.rn-indicator.active {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.rn-indicator.active .rn-indicator__dot {
+  background: var(--accent);
+  box-shadow: 0 6px 22px rgba(0, 153, 119, 0.25);
+}
+
+.rn-indicator.active .rn-indicator__progress {
+  animation-name: rn-fill;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+  animation-duration: var(--slide-duration, 5s);
+  animation-play-state: running;
+}
+
+/* When paused (class on root), freeze animations visually */
+.rn-hero.paused .rn-indicator__progress,
+.rn-hero.paused .rn-indicator.active .rn-indicator__progress {
+  animation-play-state: paused !important;
+}
+
+/* responsive tweaks */
+@media (max-width: 900px) {
+  :root {
+    --indicator-width: 48px;
+    --indicator-height: 6px;
+  }
+  .rn-cta {
+    padding: 10px 16px;
+  }
+  .rn-nav {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+@media (max-width: 600px) {
+  :root {
+    --indicator-width: 42px;
+    --indicator-height: 6px;
+  }
+  .rn-slide__inner {
+    padding: 20px;
+  }
+  .rn-quote__text {
+    font-size: 1rem;
+    -webkit-line-clamp: 3;
+  }
+  .rn-indicators {
+    bottom: 12px;
+    gap: 8px;
+  }
+  .rn-nav {
+    display: none; /* mobile swipe is used instead */
+  }
+}
