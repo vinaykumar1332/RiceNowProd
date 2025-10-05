@@ -120,17 +120,10 @@ label {
 
 /* hover/active for close */
 .drawer-close:hover {
-  background: rgba(0, 0, 0, 0.06);
   color: var(--accent-color);
   transform: rotate(90deg) scale(1.12);
-  box-shadow: var(--elevation-1);
 }
 
-/* --------------------
-   Filter body & sections
-   --------------------
-   NOTE: filter-body scrolls independently; .filter-actions is sticky at bottom
-   -------------------- */
 .filter-body {
   padding: 16px;
   display: flex;

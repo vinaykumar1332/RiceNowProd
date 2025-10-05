@@ -1,6 +1,6 @@
 :root {
-  /* === Brand / Theme Tokens === */
-  --brand-primary: #6366f1;
+ 
+  --brand-primary: #009977;
   /* main interactive color */
   --brand-accent: #d946ef;
   /* gradient accent */
@@ -22,28 +22,6 @@
   --text-color: var(--ui-text);
   --bg-color: var(--ui-bg);
 }
-
-/* === Dark Theme Override === */
-[data-theme="dark"] {
-  --brand-primary: #7c82ff;
-  --brand-accent: #ff7ac1;
-  --ui-bg: #010712;
-  --ui-text: #e6eef8;
-  --nav-bg: #010712;
-  --nav-border: rgba(255, 255, 255, 0.04);
-  --button-bg: rgba(124, 130, 255, 0.06);
-  --button-hover: rgba(124, 130, 255, 0.12);
-}
-
-/* === Base Reset === */
-body {
-  margin: 0;
-  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
-  background-color: var(--bg-color);
-  color: var(--text-color);
-  transition: background-color 0.3s, color 0.3s;
-}
-
 /* === Navbar Container === */
 .premium-nav {
   position: fixed;
@@ -56,7 +34,7 @@ body {
   border-bottom: 1px solid var(--nav-border);
   height: var(--nav-height);
   box-shadow: var(--nav-shadow);
-}
+
 
 .nav-container {
   max-width: 1300px;
@@ -188,75 +166,12 @@ body {
 }
 
 .nav-link:hover {
-
   color: var(--brand-primary);
 }
 
 .nav-link.active {
-
   color: var(--brand-primary);
   transform: translateY(-1px);
-
-}
-
-/* === Search Bar === */
-.nav-search-wrapper {
-  min-width: 220px;
-  display: flex;
-  align-items: center;
-  transition: opacity 220ms ease, transform 220ms ease;
-  will-change: opacity, transform;
-  min-height: 40px;
-
-  .nav-search {
-    border: 1px solid var(--brand-accent);
-    padding: 1px;
-  }
-}
-
-.nav-search {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  width: 100%;
-  background: var(--button-bg);
-  border-radius: 10px;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  transition: box-shadow 220ms ease, background-color 220ms ease, transform 220ms ease;
-  transform-origin: left center;
-
-}
-
-.search-bar {
-  min-width: 220px;
-  max-width: 400px;
-}
-
-.nav-search .search-icon {
-  font-size: 1.05rem;
-  color: var(--brand-primary);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  position: absolute;
-  right: 35px;
-}
-
-.nav-search input[type="search"] {
-  border: none;
-  outline: none;
-  background: transparent;
-  width: 100%;
-  font-size: 0.95rem;
-  color: var(--text-color);
-  caret-color: var(--brand-primary);
-}
-
-.nav-search:focus-within {
-  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.08);
-  background: rgba(99, 102, 241, 0.04);
-  transform: translateY(-2px);
 }
 
 /* === Actions === */
@@ -264,52 +179,6 @@ body {
   display: flex;
   align-items: center;
   gap: 1rem;
-}
-
-.theme-toggle {
-  border: none;
-  cursor: pointer;
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--button-bg);
-  position: relative;
-  transition: all 0.3s ease;
-}
-
-.theme-toggle:hover {
-  background: var(--button-hover);
-  transform: translateY(-2px);
-}
-
-.theme-toggle svg {
-  transition: transform 0.3s, opacity 0.3s;
-  position: absolute;
-  font-size: 1.25rem;
-  color: var(--brand-primary);
-}
-
-.sun-icon {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.moon-icon {
-  opacity: 0;
-  transform: translateY(20px);
-}
-
-[data-theme="dark"] .sun-icon {
-  opacity: 0;
-  transform: translateY(-20px);
-}
-
-[data-theme="dark"] .moon-icon {
-  opacity: 1;
-  transform: translateY(0);
 }
 
 .mobile-menu {
@@ -347,7 +216,14 @@ body {
   }
 }
 
-
+@keyframes shineLogo {
+  0% {
+    transform: translateX(-100%) translateY(var(--y, 0px)) rotate(45deg);
+  }
+  100% {
+    transform: translateX(400%) translateY(var(--y, 0px)) rotate(45deg);
+  }
+}
 
 @keyframes navItemFade {
   from {
@@ -407,22 +283,17 @@ body {
   .nav-actions {
     gap: 0.5rem;
   }
-
-  .nav-links .nav-search-wrapper {
-    display: block;
-    width: 100%;
-    margin-top: 0.25rem;
-    padding: 0 0.5rem;
-  }
-
-  .nav-search {
-    padding: 0.8rem 0.95rem;
-  }
 }
+
 .wheat-icon {
   font-size: 16px;
   padding: 0 0.3rem;
 }
+
 .theme-toggle{
   display: none;
+}
+.nav-search-wrapper{
+  display: none;
+}
 }
