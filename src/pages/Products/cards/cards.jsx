@@ -1,5 +1,5 @@
 // src/components/Products/cards/cards.jsx
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useCallback } from "react";
 import PropTypes from "prop-types";
 import "./cards.css";
 import { cleanTags } from "../../../utils/helpers"; // Adjust path if needed
@@ -29,7 +29,17 @@ const MemoizedCards = React.memo(function Cards({
     stock,
     active,
     category = "Unknown",
+    // possible brand keys: prefer product.brand, fallback to brand_name or mfg
+    brand: productBrand,
+    brand_name,
+    mfg,
   } = product;
+
+  // derive brand
+  const brand = useMemo(() => {
+    const b = productBrand ?? brand_name ?? mfg ?? "";
+    return String(b).trim() || "—";
+  }, [productBrand, brand_name, mfg]);
 
   const rawCandidate = useMemo(() => {
     return (
@@ -70,20 +80,57 @@ const MemoizedCards = React.memo(function Cards({
     return Math.round(((p - o) / p) * 100);
   }, [price, offer_price]);
 
-  const handleOpenOverlay = (evt) => {
-    evt?.stopPropagation();
-    setExpanded(true);
-  };
+  // handlers memoized to avoid re-creating on every render
+  const handleOpenOverlay = useCallback(
+    (evt) => {
+      evt?.stopPropagation();
+      setExpanded(true);
+    },
+    [setExpanded]
+  );
 
-  const handleCloseOverlay = (evt) => {
-    evt?.stopPropagation();
-    setExpanded(false);
-  };
+  const handleCloseOverlay = useCallback(
+    (evt) => {
+      evt?.stopPropagation();
+      setExpanded(false);
+    },
+    [setExpanded]
+  );
+
+  const handleAdd = useCallback(
+    (evt) => {
+      evt?.stopPropagation();
+      onAdd(product);
+    },
+    [onAdd, product]
+  );
+
+  const handleRemove = useCallback(
+    (evt) => {
+      evt?.stopPropagation();
+      onRemove(product);
+    },
+    [onRemove, product]
+  );
+
+  const handleOpenDetails = useCallback(
+    (evt) => {
+      evt?.stopPropagation();
+      onOpenDetails(product);
+    },
+    [onOpenDetails, product]
+  );
 
   return (
     <article className={`card ${isActive ? "card-active" : "card-inactive"}`} aria-hidden={!isActive}>
       <div className="card-media">
-        <div className="media-figure" role="img" aria-label={title} onClick={() => onOpenDetails(product)} style={{ cursor: "pointer" }}>
+        <div
+          className="media-figure"
+          role="img"
+          aria-label={title}
+          onClick={() => onOpenDetails(product)}
+          style={{ cursor: "pointer" }}
+        >
           {imageList.length ? (
             <Image
               imageUrl={isFullUrl ? rawCandidate : null}
@@ -112,6 +159,14 @@ const MemoizedCards = React.memo(function Cards({
           <div className="brand-stock">
             <span className="category">{category}</span>
           </div>
+        </div>
+
+        {/* Brand moved inside card-body (not in card-head) as requested */}
+        <div className="brand-row" aria-hidden={false}>
+          <strong className="brand-label">Brand:</strong>
+          <span className="brand-value" title={brand}>
+            {brand}
+          </span>
         </div>
 
         <p className="desc">{description}</p>
@@ -150,32 +205,32 @@ const MemoizedCards = React.memo(function Cards({
           <div className="qty-controls" aria-hidden={!isActive}>
             {qty > 0 ? (
               <>
-                <button className="qty-btn" onClick={() => onRemove(product)} aria-label={`Decrease ${title}`}>
+                <button className="qty-btn" onClick={handleRemove} aria-label={`Decrease ${title}`}>
                   −
                 </button>
                 <span className="qty">{qty}</span>
-                <button className="qty-btn" onClick={() => onAdd(product)} aria-label={`Increase ${title}`}>
+                <button className="qty-btn" onClick={handleAdd} aria-label={`Increase ${title}`}>
                   +
                 </button>
               </>
             ) : (
-              <button className="add-btn" onClick={() => onAdd(product)} disabled={!isActive} aria-label={`Add ${title} to cart`}>
+              <button className="add-btn" onClick={handleAdd} disabled={!isActive} aria-label={`Add ${title} to cart`}>
                 ＋ Add
               </button>
             )}
           </div>
 
           <button
-           title="View details"
+            title="View details"
             className="details-btn"
             onClick={(e) => {
-              onOpenDetails(product);
+              handleOpenDetails(e);
               handleOpenOverlay(e);
             }}
             aria-expanded={expanded}
             aria-controls="details-panel"
           >
-           <TbListDetails />
+            <TbListDetails />
           </button>
         </div>
       </div>
@@ -213,6 +268,9 @@ const MemoizedCards = React.memo(function Cards({
                       <strong>Category:</strong> {category}
                     </div>
                     <div>
+                      <strong>Brand:</strong> {brand}
+                    </div>
+                    <div>
                       <strong>Weight:</strong> {displayWeight}
                     </div>
                     <div className="price-block">
@@ -228,16 +286,16 @@ const MemoizedCards = React.memo(function Cards({
                 <div className="qty-controls">
                   {qty > 0 ? (
                     <>
-                      <button className="qty-btn" onClick={() => onRemove(product)} aria-label={`Decrease ${title}`}>
+                      <button className="qty-btn" onClick={handleRemove} aria-label={`Decrease ${title}`}>
                         −
                       </button>
                       <span className="qty">{qty}</span>
-                      <button className="qty-btn" onClick={() => onAdd(product)} aria-label={`Increase ${title}`}>
+                      <button className="qty-btn" onClick={handleAdd} aria-label={`Increase ${title}`}>
                         +
                       </button>
                     </>
                   ) : (
-                    <button className="add-btn" onClick={() => onAdd(product)} aria-label={`Add ${title} to cart`}>
+                    <button className="add-btn" onClick={handleAdd} aria-label={`Add ${title} to cart`}>
                       ＋ Add
                     </button>
                   )}
@@ -270,6 +328,9 @@ MemoizedCards.propTypes = {
     stock: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     active: PropTypes.oneOfType([PropTypes.string, PropTypes.bool]),
     category: PropTypes.string,
+    brand: PropTypes.string,
+    brand_name: PropTypes.string,
+    mfg: PropTypes.string,
     image_id: PropTypes.string,
     drive_image_id: PropTypes.string,
     driveId: PropTypes.string,

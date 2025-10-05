@@ -1,5 +1,5 @@
 // src/components/Products/Products.jsx
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import PropTypes from "prop-types";
 import { useNavigate } from "react-router-dom";
 import Cards from "./cards/cards";
@@ -10,6 +10,7 @@ import Search from "./Search/Search";
 import { VITE_PRODUCTS_API } from "../../API";
 import { MdOutlineShoppingCartCheckout } from "react-icons/md";
 import { cleanTags } from "../../utils/helpers";
+import { IoIosRefresh } from "react-icons/io";
 import Image from "./Images/Image"; // ensure path/casing matches your file
 
 const PRODUCTS_API = VITE_PRODUCTS_API;
@@ -45,6 +46,198 @@ function computeStableKey(product) {
     console.warn("computeStableKey failed:", e);
     return `prod-${Math.random().toString(36).slice(2, 9)}`;
   }
+}
+
+/* ---------- Refresh Button (inlined) ---------- */
+/*
+ - Now uses `visible` prop to control when it SHOULD be visible.
+ - Internally uses a short delay that transitions it into DOM-visible state,
+   but it always renders to allow CSS slide animation when toggling .hidden.
+ - Clicking the refresh calls onRefresh and parent is expected to hide the control,
+   per your "hide after click" requirement.
+*/
+function RefreshBtn({
+  visible = false,
+  delayMs = 300,
+  onRefresh = () => {},
+  busy = false,
+}) {
+  // "mounted shown" state — allows initial delay before animating in
+  const [mounted, setMounted] = useState(false);
+  const [iconOnly, setIconOnly] = useState(false);
+  const mountTimer = useRef(null);
+  const iconTimer = useRef(null);
+
+  useEffect(() => {
+    if (visible) {
+      // delay slightly to avoid jank on page load
+      clearTimeout(mountTimer.current);
+      mountTimer.current = setTimeout(() => setMounted(true), delayMs);
+      // then switch to icon-only after a bit
+      clearTimeout(iconTimer.current);
+      iconTimer.current = setTimeout(() => setIconOnly(true), 1800);
+    } else {
+      // hide immediately
+      clearTimeout(mountTimer.current);
+      clearTimeout(iconTimer.current);
+      setMounted(false);
+      setIconOnly(false);
+    }
+    return () => {
+      clearTimeout(mountTimer.current);
+      clearTimeout(iconTimer.current);
+    };
+  }, [visible, delayMs]);
+
+  const handleClick = (e) => {
+    e?.stopPropagation();
+    if (busy) return;
+    onRefresh && onRefresh();
+    // Clicking should immediately go to icon-only for visual feedback
+    setIconOnly(true);
+  };
+
+  // Always render the DOM container. Use `hidden` class to slide away.
+  const wrapperClass = `refresh-overlay-wrapper ${mounted && visible ? "" : "hidden"}`;
+
+  return (
+    <div className={wrapperClass} aria-live="polite" role="region" aria-label="Refresh cached data">
+      <button
+        type="button"
+        className={`refresh-badge-btn ${iconOnly ? "icon-only" : "with-text"} ${busy ? "busy" : ""}`}
+        onClick={handleClick}
+        title={busy ? "Refreshing..." : "Refresh product list"}
+        aria-busy={busy}
+        aria-label="Refresh products"
+      >
+        <span className="refresh-icon" aria-hidden="true"><IoIosRefresh /></span>
+        {!iconOnly && <span className="refresh-text">Refresh</span>}
+        {busy && <span className="refresh-spinner" aria-hidden="true" />}
+      </button>
+    </div>
+  );
+}
+
+RefreshBtn.propTypes = {
+  visible: PropTypes.bool,
+  delayMs: PropTypes.number,
+  onRefresh: PropTypes.func,
+  busy: PropTypes.bool,
+};
+
+/* ---------- Image candidate resolver (used by CartDrawer etc) ---------- */
+function resolveImageCandidate(candidate) {
+  if (!candidate) return { imageUrl: null, imageId: null };
+
+  if (Array.isArray(candidate) && candidate.length > 0) candidate = candidate[0];
+
+  if (typeof candidate === "object") {
+    const possible = candidate.url || candidate.src || candidate.drive_image_id || candidate.imageId || candidate.id;
+    if (possible) return resolveImageCandidate(possible);
+    if (candidate.full || candidate.large || candidate.medium) return resolveImageCandidate(candidate.full || candidate.large || candidate.medium);
+    return { imageUrl: null, imageId: null };
+  }
+
+  const s = String(candidate).trim();
+  if (!s) return { imageUrl: null, imageId: null };
+  if (isFullUrl(s)) return { imageUrl: s, imageId: null };
+  return { imageUrl: null, imageId: s };
+}
+
+/* ---------- Main Products component ---------- */
+/* ---------- CACHING HELPERS (localStorage + sessionStorage fallback) ---------- */
+const CACHE_KEY = "rice_products_cache_v1";
+const CACHE_META_KEY = "rice_products_meta_v1";
+const DEFAULT_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+function safeStorageAvailable(type = "localStorage") {
+  try {
+    const storage = window[type];
+    const testKey = "__rn_test__";
+    storage.setItem(testKey, "1");
+    storage.removeItem(testKey);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function readLocalJSON(key) {
+  try {
+    if (safeStorageAvailable("localStorage")) {
+      const v = localStorage.getItem(key);
+      if (v) return JSON.parse(v);
+    }
+  } catch (err) {
+    console.warn("readLocalJSON(localStorage) failed", key, err);
+  }
+  try {
+    if (safeStorageAvailable("sessionStorage")) {
+      const v2 = sessionStorage.getItem(key);
+      if (v2) return JSON.parse(v2);
+    }
+  } catch (err) {
+    console.warn("readLocalJSON(sessionStorage) failed", key, err);
+  }
+  return null;
+}
+
+function writeLocalJSON(key, value) {
+  const json = JSON.stringify(value);
+  try {
+    if (safeStorageAvailable("localStorage")) {
+      localStorage.setItem(key, json);
+      return;
+    }
+  } catch (err) {
+    console.warn("writeLocalJSON(localStorage) failed", key, err);
+  }
+  try {
+    if (safeStorageAvailable("sessionStorage")) {
+      sessionStorage.setItem(key, json);
+      return;
+    }
+  } catch (err) {
+    console.warn("writeLocalJSON(sessionStorage) failed", key, err);
+  }
+}
+
+function removeLocal(key) {
+  try {
+    if (safeStorageAvailable("localStorage")) localStorage.removeItem(key);
+  } catch (e) {}
+  try {
+    if (safeStorageAvailable("sessionStorage")) sessionStorage.removeItem(key);
+  } catch (e) {}
+}
+
+function simpleHash(str) {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h += (h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24);
+    h = h >>> 0;
+  }
+  return h.toString(36);
+}
+function readCachedProducts() {
+  const data = readLocalJSON(CACHE_KEY);
+  const meta = readLocalJSON(CACHE_META_KEY);
+  if (!data || !meta) return null;
+  return { data, meta };
+}
+function writeCachedProducts(data, meta = {}) {
+  writeLocalJSON(CACHE_KEY, data);
+  const finalMeta = {
+    ...(readLocalJSON(CACHE_META_KEY) || {}),
+    ...meta,
+    fetchedAt: Date.now(),
+  };
+  writeLocalJSON(CACHE_META_KEY, finalMeta);
+}
+function invalidateCache() {
+  removeLocal(CACHE_KEY);
+  removeLocal(CACHE_META_KEY);
 }
 
 /* ---------- CartDrawer ---------- */
@@ -308,23 +501,19 @@ FilterPanel.propTypes = {
 };
 
 /* ---------- ProductDetailsOverlay (carousel) ---------- */
+// (kept unchanged from your file for brevity — you already have this)
 function ProductDetailsOverlay({ product, onClose, onAdd, onRemove, qty }) {
   if (!product) return null;
-
   const { title, description, images, image, weight, tags, tags_array, brand } = product;
-
   const imageListBase = Array.isArray(images) && images.length ? images.slice() : image ? [image] : [];
   if (imageListBase.length === 0) {
     const extra = product.image_id ?? product.drive_image_id ?? product.driveId ?? product.id ?? null;
     if (extra) imageListBase.push(extra);
   }
-
   const [index, setIndex] = useState(0);
-
   useEffect(() => {
     if (index >= imageListBase.length) setIndex(Math.max(0, imageListBase.length - 1));
   }, [imageListBase.length, index]);
-
   useEffect(() => {
     const onKey = (e) => {
       if (!product) return;
@@ -346,7 +535,6 @@ function ProductDetailsOverlay({ product, onClose, onAdd, onRemove, qty }) {
       <div className="details-overlay open" onClick={onClose}>
         <div className="details-content" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Product details">
           <button type="button" className="drawer-close" onClick={onClose} aria-label="Close details">✕</button>
-
           <div className="details-body no-image">
             <div className="details-text">
               <h2>{title}</h2>
@@ -354,13 +542,11 @@ function ProductDetailsOverlay({ product, onClose, onAdd, onRemove, qty }) {
               <p>{description}</p>
               <p><strong>Price:</strong> ₹{product.offer_price ?? product.price}</p>
               <p>{weight}</p>
-
               <div className="tags">
                 {(tagList || []).map((t) => <span key={String(t)} className="tag">{t}</span>)}
               </div>
             </div>
           </div>
-
           <div className="qty-controls">
             {qty > 0 ? (
               <>
@@ -377,31 +563,17 @@ function ProductDetailsOverlay({ product, onClose, onAdd, onRemove, qty }) {
     );
   }
 
-  const goPrev = (e) => {
-    e?.stopPropagation();
-    setIndex((i) => (i > 0 ? i - 1 : imageListBase.length - 1));
-  };
-
-  const goNext = (e) => {
-    e?.stopPropagation();
-    setIndex((i) => (i < imageListBase.length - 1 ? i + 1 : 0));
-  };
-
-  const jumpTo = (i) => (e) => {
-    e?.stopPropagation();
-    setIndex(i);
-  };
-
+  const goPrev = (e) => { e?.stopPropagation(); setIndex((i) => (i > 0 ? i - 1 : imageListBase.length - 1)); };
+  const goNext = (e) => { e?.stopPropagation(); setIndex((i) => (i < imageListBase.length - 1 ? i + 1 : 0)); };
+  const jumpTo = (i) => (e) => { e?.stopPropagation(); setIndex(i); };
   const tagList = cleanTags(tags, tags_array);
 
   return (
     <div className="details-overlay open" onClick={onClose}>
       <div className="details-content details-carousel" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Product details">
         <button type="button" className="drawer-close" onClick={onClose} aria-label="Close details">✕</button>
-
         <div className="carousel-wrap">
           <button className="carousel-nav left" onClick={goPrev} aria-label="Previous image" type="button">‹</button>
-
           <div className="carousel-main">
             <Image
               imageUrl={isFullUrl(imageListBase[index]) ? imageListBase[index] : null}
@@ -412,7 +584,6 @@ function ProductDetailsOverlay({ product, onClose, onAdd, onRemove, qty }) {
               style={{ width: "100%", height: "100%" }}
             />
           </div>
-
           <button className="carousel-nav right" onClick={goNext} aria-label="Next image" type="button">›</button>
         </div>
 
@@ -474,85 +645,7 @@ ProductDetailsOverlay.propTypes = {
   qty: PropTypes.number.isRequired,
 };
 
-/* ---------- Image candidate resolver (used by CartDrawer etc) ---------- */
-function resolveImageCandidate(candidate) {
-  if (!candidate) return { imageUrl: null, imageId: null };
-
-  if (Array.isArray(candidate) && candidate.length > 0) candidate = candidate[0];
-
-  if (typeof candidate === "object") {
-    const possible = candidate.url || candidate.src || candidate.drive_image_id || candidate.imageId || candidate.id;
-    if (possible) return resolveImageCandidate(possible);
-    if (candidate.full || candidate.large || candidate.medium) return resolveImageCandidate(candidate.full || candidate.large || candidate.medium);
-    return { imageUrl: null, imageId: null };
-  }
-
-  const s = String(candidate).trim();
-  if (!s) return { imageUrl: null, imageId: null };
-  if (isFullUrl(s)) return { imageUrl: s, imageId: null };
-  return { imageUrl: null, imageId: s };
-}
-
 /* ---------- Main Products component ---------- */
-
-/* ---------- CACHING HELPERS (localStorage) ---------- */
-const CACHE_KEY = "rice_products_cache_v1";
-const CACHE_META_KEY = "rice_products_meta_v1";
-const DEFAULT_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
-
-function readLocalJSON(key) {
-  try {
-    const v = localStorage.getItem(key);
-    if (!v) return null;
-    return JSON.parse(v);
-  } catch (err) {
-    console.warn("readLocalJSON failed", key, err);
-    return null;
-  }
-}
-function writeLocalJSON(key, value) {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch (err) {
-    console.warn("writeLocalJSON failed", key, err);
-  }
-}
-function removeLocal(key) {
-  try {
-    localStorage.removeItem(key);
-  } catch (err) {
-    // ignore
-  }
-}
-function simpleHash(str) {
-  let h = 2166136261 >>> 0;
-  for (let i = 0; i < str.length; i++) {
-    h ^= str.charCodeAt(i);
-    h += (h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24);
-    h = h >>> 0;
-  }
-  return h.toString(36);
-}
-function readCachedProducts() {
-  const data = readLocalJSON(CACHE_KEY);
-  const meta = readLocalJSON(CACHE_META_KEY);
-  if (!data || !meta) return null;
-  return { data, meta };
-}
-function writeCachedProducts(data, meta = {}) {
-  writeLocalJSON(CACHE_KEY, data);
-  const finalMeta = {
-    ...(readLocalJSON(CACHE_META_KEY) || {}),
-    ...meta,
-    fetchedAt: Date.now(),
-  };
-  writeLocalJSON(CACHE_META_KEY, finalMeta);
-}
-function invalidateCache() {
-  removeLocal(CACHE_KEY);
-  removeLocal(CACHE_META_KEY);
-}
-
 export default function Products() {
   const navigate = useNavigate();
 
@@ -588,6 +681,11 @@ export default function Products() {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(null);
+
+  // refresh button visibility / busy + dismissal control
+  const [refreshVisible, setRefreshVisible] = useState(false); // whether it should be visible (subject to userDismissed)
+  const [refreshBusy, setRefreshBusy] = useState(false);
+  const [userDismissed, setUserDismissed] = useState(false); // true after user clicks the button (hides)
 
   const priceRanges = useMemo(
     () => [
@@ -699,10 +797,12 @@ export default function Products() {
 
     setLoading(true);
     setError(null);
+    if (force) setRefreshBusy(true);
 
     if (!PRODUCTS_API) {
       setError("Products API not configured.");
       setLoading(false);
+      setRefreshBusy(false);
       return;
     }
 
@@ -727,8 +827,16 @@ export default function Products() {
         setCurrentFilter((c) => ({ ...c, maxPrice: processed.maxPrice }));
 
         const age = now - (cached.meta?.fetchedAt || 0);
+        // Show refresh hint if cache is older than half the TTL
+        if (age > useTTLMs / 2 && !userDismissed) {
+          setRefreshVisible(true);
+        } else {
+          setRefreshVisible(false);
+        }
+
         if (age <= useTTLMs) {
           setLoading(false);
+          setRefreshBusy(false);
           return;
         }
       }
@@ -751,6 +859,8 @@ export default function Products() {
           fetchedAt: Date.now(),
         });
         setLoading(false);
+        setRefreshBusy(false);
+        setRefreshVisible(false);
         return;
       }
 
@@ -760,6 +870,9 @@ export default function Products() {
         if (cached && cached.data) {
           console.warn(msg, " — serving cached data");
           setLoading(false);
+          setRefreshBusy(false);
+          // keep refresh visible so users can attempt manual refresh
+          setRefreshVisible(!userDismissed);
           return;
         }
         throw new Error(msg);
@@ -792,6 +905,8 @@ export default function Products() {
           fetchedAt: Date.now(),
         });
         setLoading(false);
+        setRefreshBusy(false);
+        setRefreshVisible(false);
         return;
       }
 
@@ -818,6 +933,10 @@ export default function Products() {
         hash: responseHash,
         fetchedAt: Date.now(),
       });
+
+      // hide refresh hint because we've got fresh data
+      setRefreshVisible(false);
+      setUserDismissed(false); // reset dismissal after successful fresh fetch
     } catch (err) {
       console.error("Failed to fetch products", err);
       setError(err.message || "Failed to fetch products");
@@ -827,11 +946,14 @@ export default function Products() {
         const uniqueRows = dedupeByKey(rows);
         setRaw(uniqueRows);
         setProducts(uniqueRows);
+        // keep refresh visible so user can try again unless user dismissed
+        setRefreshVisible(!userDismissed);
       }
     } finally {
       setLoading(false);
+      setRefreshBusy(false);
     }
-  }, [setProducts, setRaw, setFilters, setCurrentFilter]);
+  }, [setProducts, setRaw, setFilters, setCurrentFilter, userDismissed]);
 
   useEffect(() => {
     fetchProducts({ useTTLMs: DEFAULT_CACHE_TTL_MS, force: false });
@@ -1011,6 +1133,82 @@ export default function Products() {
     }
   };
 
+  /* ---------- Scroll & Overlay logic for refresh button ---------- */
+  // Show when scroll >= threshold or when overlay opens.
+  const SCROLL_THRESHOLD = 0.30; // 30%
+  const scrollListenerRef = useRef(null);
+
+  useEffect(() => {
+    const onScroll = () => {
+      try {
+        const scrollTop = window.scrollY || window.pageYOffset || document.documentElement.scrollTop || 0;
+        const docHeight = Math.max(
+          document.documentElement.scrollHeight,
+          document.body.scrollHeight,
+          document.documentElement.clientHeight
+        );
+        const winH = window.innerHeight || document.documentElement.clientHeight || 0;
+        const scrollable = Math.max(docHeight - winH, 1);
+        const percent = scrollTop / scrollable;
+        if (percent >= SCROLL_THRESHOLD) {
+          // only show if user hasn't dismissed explicitly
+          if (!userDismissed) setRefreshVisible(true);
+        } else {
+          // hide if below threshold (unless overlay open)
+          if (!selectedProduct) setRefreshVisible(false);
+        }
+      } catch (e) {
+        // ignore
+      }
+    };
+
+    // initial check
+    onScroll();
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    scrollListenerRef.current = onScroll;
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      scrollListenerRef.current = null;
+    };
+  }, [userDismissed, selectedProduct]);
+
+  // When user opens overlay (selects product) show refresh and reset dismissal
+  useEffect(() => {
+    if (selectedProduct) {
+      setRefreshVisible(true);
+      setUserDismissed(false);
+    } else {
+      // if overlay closes, let scroll listener decide visibility
+      // we run the scroll listener manually so UI updates immediately
+      if (scrollListenerRef.current) scrollListenerRef.current();
+    }
+  }, [selectedProduct]);
+
+  /* ---------- Refresh handlers ---------- */
+  const handleManualRefresh = async () => {
+    // Clear rice-related data from sessionStorage and localStorage
+    invalidateCache(); // Clears rice_products_cache_v1 and rice_products_meta_v1 from localStorage/sessionStorage
+    try {
+      sessionStorage.removeItem("cart");
+    } catch (e) {
+      console.warn("Failed to clear cart from sessionStorage:", e);
+    }
+    setCart([]); // Reset cart state
+
+    // Force fetch and hide UI (hide immediately on click)
+    setRefreshBusy(true);
+    // hide right away after click
+    setRefreshVisible(false);
+    setUserDismissed(true);
+    try {
+      await fetchProducts({ force: true, useTTLMs: DEFAULT_CACHE_TTL_MS });
+    } finally {
+      setRefreshBusy(false);
+    }
+  };
+
+  /* ---------- UI: rendering ---------- */
   return (
     <div className="page products-page-wrapper">
       <div className="page-head-wrapper">
@@ -1042,6 +1240,14 @@ export default function Products() {
               placeholder="Search rice, brand, weight"
               debounceMs={300}
             />
+          </div>
+
+          {/* small helper: last updated (optional) */}
+          <div className="Date-card">
+            {(() => {
+              const meta = readLocalJSON(CACHE_META_KEY);
+              return meta?.fetchedAt ? `Updated: ${new Date(meta.fetchedAt).toLocaleString()}` : "";
+            })()}
           </div>
         </div>
 
@@ -1117,6 +1323,14 @@ export default function Products() {
         onAdd={addToCart}
         onRemove={removeOne}
         qty={cartQtyMap.get(selectedProduct?.id ?? selectedProduct?.title) ?? 0}
+      />
+
+      {/* Floating refresh button (bottom-left). It will slide in/out using the .hidden class */}
+      <RefreshBtn
+        visible={refreshVisible}
+        delayMs={220}
+        busy={refreshBusy || loading}
+        onRefresh={handleManualRefresh}
       />
     </div>
   );
