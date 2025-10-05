@@ -436,16 +436,11 @@
     }
 
     .details-btn {
-      background: var(--bg-light);
       border: 1px solid var(--card-border);
       padding: 0.375rem 0.5rem;
       cursor: pointer;
-      color: var(--text-muted);
       font-size: var(--font-size-small);
-      transition: var(--transition-fast), transform 0.1s ease, border-color 0.3s ease;
       border-radius: 8px;
-      font-weight: 600;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
 
       &:hover {
         color: var(--accent-color);
@@ -453,6 +448,12 @@
         background: rgba(0, 160, 80, 0.08);
         border-color: var(--accent-color);
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+      }
+
+      svg{
+        position: relative;
+        top: 2px;
+        font-size: 1rem;
       }
     }
 
@@ -600,117 +601,153 @@ body.theme-dark {
 
 }
 
-.details-content{
+.details-content {
   .qty-controls {
-  display: inline-flex;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: rgba(0, 0, 0, 0.03);
+    padding: 6px;
+    border-radius: 10px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    transition: box-shadow 160ms ease, transform 140ms ease;
+    will-change: transform, box-shadow;
+    background: none;
+  }
+
+  /* number display */
+  .qty-controls span {
+    min-width: 1.4rem;
+    text-align: center;
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--text-primary, #222);
+    line-height: 1;
+    padding: 0 6px;
+    display: inline-block;
+  }
+
+  /* buttons (no class) */
+  .qty-controls button {
+    --btn-size: 36px;
+    width: var(--btn-size);
+    height: var(--btn-size);
+    display: inline-grid;
+    place-items: center;
+    padding: 0;
+    border-radius: 8px;
+    border: 1px solid rgba(68, 68, 68, 0.14);
+    background: linear-gradient(180deg, #ffffff, #f4f6f5);
+    color: #222;
+    font-size: 1.15rem;
+    cursor: pointer;
+    line-height: 1;
+    transition: transform 160ms cubic-bezier(.2, .9, .2, 1),
+      box-shadow 160ms ease,
+      background 160ms ease,
+      border-color 160ms ease;
+    box-shadow: 0 2px 6px rgba(10, 10, 10, 0.04);
+    user-select: none;
+  }
+
+  /* hover */
+  .qty-controls button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 18px rgba(8, 12, 20, 0.08);
+    border-color: rgba(0, 0, 0, 0.18);
+  }
+
+  /* active click */
+  .qty-controls button:active {
+    transform: translateY(0) scale(0.96);
+    box-shadow: 0 4px 10px rgba(8, 12, 20, 0.06);
+  }
+
+  /* distinguish first (-) and last (+) */
+  .qty-controls button:first-child {
+    background: linear-gradient(180deg, #fff6f6, #ffecec);
+    border-color: rgba(200, 40, 40, 0.12);
+    color: #c33;
+  }
+
+  .qty-controls button:last-child {
+    background: linear-gradient(180deg, #f6fff8, #ecfff3);
+    border-color: rgba(0, 160, 120, 0.12);
+    color: #00a776;
+  }
+
+  /* focus ring */
+  .qty-controls button:focus {
+    outline: none;
+    box-shadow: 0 4px 14px rgba(0, 160, 120, 0.12);
+    border-color: #00a776;
+    transform: translateY(-2px);
+  }
+
+  .qty-controls button:focus:not(:focus-visible) {
+    box-shadow: none;
+    border-color: rgba(0, 0, 0, 0.12);
+    width: 50%;
+  }
+
+  /* disabled */
+  .qty-controls button[disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+
+  /* animation keyframes for optional bounce */
+  @keyframes clickBounce {
+    0% {
+      transform: translateY(0) scale(1);
+    }
+
+    40% {
+      transform: translateY(-5px) scale(1.02);
+    }
+
+    100% {
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  /* if you toggle .clicked class via JS/React */
+  .qty-controls.clicked button {
+    animation: clickBounce 280ms ease;
+  }
+
+  /* mobile tweak */
+  @media (max-width: 699px) {
+    .qty-controls button {
+      --btn-size: 30px;
+      font-size: 1rem;
+    }
+
+    .qty-controls span {
+      min-width: 1.1rem;
+      font-size: 0.9rem;
+    }
+  }
+
+}
+
+.brand-row {
+  margin: 6px 0;
+  display: flex;
+  gap: 6px;
   align-items: center;
-  gap: 0.4rem;
-  background: rgba(0, 0, 0, 0.03);
-  padding: 6px;
-  border-radius: 10px;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  transition: box-shadow 160ms ease, transform 140ms ease;
-  will-change: transform, box-shadow;
-  background: none;
+  font-size: 0.9rem;
+  color: var(--muted);
 }
 
-/* number display */
-.qty-controls span {
-  min-width: 1.4rem;
-  text-align: center;
-  font-weight: 700;
-  font-size: 0.95rem;
-  color: var(--text-primary, #222);
-  line-height: 1;
-  padding: 0 6px;
-  display: inline-block;
+.brand-label {
+ display: none;
 }
 
-/* buttons (no class) */
-.qty-controls button {
-  --btn-size: 36px;
-  width: var(--btn-size);
-  height: var(--btn-size);
-  display: inline-grid;
-  place-items: center;
-  padding: 0;
-  border-radius: 8px;
-  border: 1px solid rgba(68, 68, 68, 0.14);
-  background: linear-gradient(180deg, #ffffff, #f4f6f5);
-  color: #222;
-  font-size: 1.15rem;
-  cursor: pointer;
-  line-height: 1;
-  transition: transform 160ms cubic-bezier(.2,.9,.2,1),
-              box-shadow 160ms ease,
-              background 160ms ease,
-              border-color 160ms ease;
-  box-shadow: 0 2px 6px rgba(10,10,10,0.04);
-  user-select: none;
-}
-
-/* hover */
-.qty-controls button:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 18px rgba(8, 12, 20, 0.08);
-  border-color: rgba(0,0,0,0.18);
-}
-
-/* active click */
-.qty-controls button:active {
-  transform: translateY(0) scale(0.96);
-  box-shadow: 0 4px 10px rgba(8,12,20,0.06);
-}
-
-/* distinguish first (-) and last (+) */
-.qty-controls button:first-child {
-  background: linear-gradient(180deg, #fff6f6, #ffecec);
-  border-color: rgba(200, 40, 40, 0.12);
-  color: #c33;
-}
-.qty-controls button:last-child {
-  background: linear-gradient(180deg, #f6fff8, #ecfff3);
-  border-color: rgba(0,160,120,0.12);
-  color: #00a776;
-}
-
-/* focus ring */
-.qty-controls button:focus {
-  outline: none;
-  box-shadow: 0 4px 14px rgba(0,160,120,0.12);
-  border-color: #00a776;
-  transform: translateY(-2px);
-}
-.qty-controls button:focus:not(:focus-visible) {
-  box-shadow: none;
-  border-color: rgba(0,0,0,0.12);
-  width: 50%;
-}
-
-/* disabled */
-.qty-controls button[disabled] {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
-
-/* animation keyframes for optional bounce */
-@keyframes clickBounce {
-  0%   { transform: translateY(0) scale(1); }
-  40%  { transform: translateY(-5px) scale(1.02); }
-  100% { transform: translateY(0) scale(1); }
-}
-
-/* if you toggle .clicked class via JS/React */
-.qty-controls.clicked button {
-  animation: clickBounce 280ms ease;
-}
-
-/* mobile tweak */
-@media (max-width: 699px) {
-  .qty-controls button { --btn-size: 30px; font-size: 1rem; }
-  .qty-controls span { min-width: 1.1rem; font-size: 0.9rem; }
-}
-
+.brand-value {
+color: var(--accent-color);
+font-weight: 600;
+font-size: 0.97rem;
 }
