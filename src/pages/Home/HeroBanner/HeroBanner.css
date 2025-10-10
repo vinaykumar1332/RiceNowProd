@@ -1,289 +1,357 @@
 :root {
-  --primary-green: #009977;
-  --accent: var(--primary-green);
-  --accent-foreground: #ffffff;
-  --bg-veil-start: rgba(0, 0, 0, 0.28);
-  --bg-veil-end: rgba(0, 0, 0, 0.46);
-  --hero-min-h: 60vh;
-  --hero-max-h: 100vh;
-  --slide-duration: 5s;
-  --font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-  --indicator-size: 12px;
-  --indicator-space: 12px;
-  --indicator-width: 56px;
-  --indicator-height: 6px;
+  --hero-height-mobile: 48vh;
+  --hero-height-md: 64vh;
+  --hero-height-lg: 76vh;
+
+  --overlay-color: rgba(0, 0, 0, 0.35);
+  --overlay-color-strong: rgba(0, 0, 0, 0.46);
+
+  --bullet-size: 10px;
+  --bullet-gap: 10px;
+
+  --control-size: 44px;
+  --control-bg: rgba(0, 0, 0, 0.45);
+  --control-hover: rgba(0, 0, 0, 0.62);
+
+  /* Set this to your brand accent color (example): */
+  --accent: ;
+  /* teal-500 default — change to your site accent */
+
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  --max-content-width: 1200px;
 }
 
-/* Container */
-.rn-hero {
-  font-family: var(--font-family);
+.heroBanner-container{
+/* Base */
+.hero-banner {
   position: relative;
   width: 100%;
-  min-height: var(--hero-min-h);
-  max-height: var(--hero-max-h);
   overflow: hidden;
+  font-family: var(--font-sans);
   color: #fff;
-  background: #000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
-/* screen reader live area (visually hidden) */
-.rn-sr {
+.slides-wrapper {
+  position: relative;
+  width: 100%;
+  height: 60vh;
+}
+
+@media (min-width: 640px) {
+  .slides-wrapper {
+    height: var(--hero-height-md);
+  }
+}
+
+@media (min-width: 1024px) {
+  .slides-wrapper {
+    height: var(--hero-height-lg);
+  }
+}
+
+/* Slide */
+.slide {
   position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
-}
-
-/* Slider viewport */
-.rn-slider {
+  inset: 0;
   width: 100%;
   height: 100%;
-  position: relative;
-}
-
-/* slide */
-.rn-slide {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  transform: translateY(8px) scale(1.01);
-  transition: opacity 700ms ease, transform 700ms ease;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.rn-slide.active {
-  opacity: 1;
-  transform: translateY(0) scale(1);
-  z-index: 2;
-}
-
-/* background cover */
-.rn-slide__bg {
+.slide-overlay {
   position: absolute;
   inset: 0;
-  background-size: cover;
-  background-position: center;
-  filter: saturate(0.95) contrast(1);
-  z-index: 1;
+  background: var(--overlay-color);
+  transition: background 0.25s ease;
 }
 
-/* content centered, responsive */
-.rn-slide__inner {
-  z-index: 3;
+/* Content */
+.slide-content {
   position: relative;
-  max-width: 1100px;
-  width: min(94%, 1100px);
-  padding: 32px 20px;
-  text-align: center;
+  z-index: 2;
+  width: 100%;
+  max-width: var(--max-content-width);
+  margin: 0 auto;
+  padding: 1.25rem;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  align-items: center;
+  gap: 1rem;
+  top: 40px;
+  left: 40px;
 }
 
-/* Quote: modern, italic, clamps lines */
-.rn-quote {
-  margin: 0;
-  color: #fff;
-  text-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
-  font-style: italic;
-  font-weight: 500;
-  line-height: 1.2;
-  max-width: 920px;
+@media (min-width: 820px) {
+  .slide-content {
+    flex-direction: row;
+    align-items: flex-start;
+    padding: 2rem;
+  }
 }
 
-.rn-quote__text {
-  font-size: clamp(1rem, 2.5vw, 1.6rem); /* responsive */
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  margin: 0;
+.slide-text {
+  flex: 1 1 60%;
+  color: white;
+  text-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
 }
 
-/* CTA button */
-.rn-cta {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 20px;
-  background: linear-gradient(180deg, var(--accent), #007f63);
-  color: var(--accent-foreground);
-  border-radius: 999px;
-  text-decoration: none;
-  font-weight: 700;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  transition: transform 160ms ease, box-shadow 160ms ease;
-}
-
-.rn-cta:hover,
-.rn-cta:focus {
-  transform: translateY(-4px);
-  box-shadow: 0 18px 56px rgba(0, 0, 0, 0.55);
-  outline: none;
-}
-
-.rn-cta__icon {
-  width: 20px;
-  height: 20px;
-  object-fit: contain;
+.slide-right {
+  flex: 0 0 32%;
   display: none;
 }
 
-/* Navigation arrows */
-.rn-nav {
+@media (min-width: 820px) {
+  .slide-right {
+    display: block;
+  }
+}
+
+/* Titles */
+.kicker {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.75rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  opacity: 0.9;
+  color: #f3f3f3;
+}
+
+.title {
+  margin: 0;
+  font-weight: 800;
+  line-height: 1.02;
+  font-size: 1.8rem;
+}
+
+@media (min-width: 640px) {
+  .title {
+    font-size: 2.6rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .title {
+    font-size: 3.4rem;
+  }
+}
+
+.subtitle {
+  margin-top: 0.75rem;
+  font-size: 1rem;
+  max-width: 60ch;
+  opacity: 0.95;
+}
+
+@media (min-width: 1024px) {
+  .subtitle {
+    font-size: 1.125rem;
+  }
+}
+
+/* CTA */
+.cta-row {
+  margin-top: 1.25rem;
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.625rem 1rem;
+  border-radius: 999px;
+  background: #fff;
+  color: #111;
+  text-decoration: none;
+  font-weight: 600;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+
+.cta:focus {
+  outline: 3px solid rgba(255, 255, 255, 0.15);
+  outline-offset: 2px;
+}
+
+.cta:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
+}
+
+.secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.55rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: transparent;
+  color: #fff;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.secondary:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* Controls: prev on left, next on right */
+.control-prev,
+.control-next {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  z-index: 6;
-  background: rgba(0, 0, 0, 0.48);
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+}
+
+/* Prev left */
+.control-prev {
+  left: 1rem;
+}
+
+/* Next right */
+.control-next {
+  right: 1rem;
+}
+
+/* Button shared styles */
+.control-btn {
+  width: var(--control-size);
+  height: var(--control-size);
+  border-radius: 999px;
+  background: var(--control-bg);
   color: #fff;
   border: none;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  font-size: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  transition: transform 120ms ease, background 120ms ease;
-  backdrop-filter: blur(4px);
+  font-size: 1.25rem;
+  line-height: 1;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+  transition: background .12s ease, transform .12s ease, box-shadow .12s ease;
 }
 
-.rn-nav:focus {
-  outline: 2px solid rgba(255, 255, 255, 0.12);
+/* Use accent color for filled style variant (primary) */
+.control-btn.accent {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
 }
 
-.rn-nav--prev {
-  left: 18px;
+/* Use slightly darker accent for hover */
+.control-btn.accent:hover {
+  filter: brightness(0.95);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.18);
 }
 
-.rn-nav--next {
-  right: 18px;
+/* small subtle ghost style */
+.control-btn.ghost {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-/* Indicators (center bottom) */
-.rn-indicators {
+/* Default hover for non-accent */
+.control-btn:hover {
+  background: var(--control-hover);
+  transform: translateY(-2px);
+}
+
+/* Focus outlines */
+.control-btn:focus {
+  outline: 3px solid rgba(255, 255, 255, 0.12);
+  outline-offset: 2px;
+}
+
+/* Bullets */
+.bullets {
   position: absolute;
   left: 50%;
+  bottom: 1.25rem;
   transform: translateX(-50%);
-  bottom: 18px;
+  z-index: 45;
   display: flex;
-  gap: var(--indicator-space);
+  gap: var(--bullet-gap);
   align-items: center;
-  z-index: 7;
 }
 
-/* single indicator button */
-.rn-indicator {
-  --w: var(--indicator-width);
-  --h: var(--indicator-height);
-  width: var(--w);
-  height: calc(var(--h) + 18px);
-  background: rgba(255, 255, 255, 0.04);
+.bullet {
+  width: var(--bullet-size);
+  height: var(--bullet-size);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.45);
   border: none;
-  border-radius: 10px;
-  padding: 6px;
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
+  padding: 0;
   cursor: pointer;
+  transition: transform .14s ease, background .12s ease;
 }
 
-.rn-indicator:focus {
-  outline: 2px solid rgba(255, 255, 255, 0.12);
+.bullet:hover {
+  transform: scale(1.15);
+  background: rgba(255, 255, 255, 0.75);
 }
 
-/* dot above the progress bar — subtle */
-.rn-indicator__dot {
-  width: var(--indicator-size);
-  height: var(--indicator-size);
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.12);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+.bullet.active {
+  transform: scale(1.28);
+  background: #fff;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
 }
 
-/* progress bar below dot */
-.rn-indicator__progress {
-  width: 100%;
-  height: var(--indicator-height);
-  background: linear-gradient(90deg, rgba(255,255,255,0.96), rgba(255,255,255,0.88));
-  border-radius: 6px;
-  transform-origin: left center;
-  width: 0%;
-}
-
-/* animation fill (grows width 0 -> 100%) */
-@keyframes rn-fill {
-  from { width: 0%; }
-  to { width: 100%; }
-}
-
-/* active indicator styles and running animation */
-.rn-indicator.active {
-  background: rgba(0, 0, 0, 0.5);
-}
-
-.rn-indicator.active .rn-indicator__dot {
-  background: var(--accent);
-  box-shadow: 0 6px 22px rgba(0, 153, 119, 0.25);
-}
-
-.rn-indicator.active .rn-indicator__progress {
-  animation-name: rn-fill;
-  animation-timing-function: linear;
-  animation-fill-mode: forwards;
-  animation-duration: var(--slide-duration, 5s);
-  animation-play-state: running;
-}
-
-/* When paused (class on root), freeze animations visually */
-.rn-hero.paused .rn-indicator__progress,
-.rn-hero.paused .rn-indicator.active .rn-indicator__progress {
-  animation-play-state: paused !important;
-}
-
-/* responsive tweaks */
-@media (max-width: 900px) {
-  :root {
-    --indicator-width: 48px;
-    --indicator-height: 6px;
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .control-prev {
+    left: 0.5rem;
   }
-  .rn-cta {
-    padding: 10px 16px;
-  }
-  .rn-nav {
-    width: 40px;
-    height: 40px;
-  }
-}
 
-@media (max-width: 600px) {
-  :root {
-    --indicator-width: 42px;
-    --indicator-height: 6px;
+  .control-next {
+    right: 0.5rem;
   }
-  .rn-slide__inner {
-    padding: 20px;
-  }
-  .rn-quote__text {
+
+  .control-btn {
+    width: 38px;
+    height: 38px;
     font-size: 1rem;
-    -webkit-line-clamp: 3;
   }
-  .rn-indicators {
-    bottom: 12px;
-    gap: 8px;
+
+  .cta {
+    padding: 0.5rem 0.85rem;
+    font-size: 0.95rem;
   }
-  .rn-nav {
-    display: none; /* mobile swipe is used instead */
+
+  .title {
+    font-size: 1.6rem;
   }
+}
+
+/* accessibility focus */
+button:focus,
+a:focus {
+  outline-offset: 3px;
+}
+
+/* lazy classes */
+.slide.lazy-loading {
+  filter: blur(6px) saturate(0.9);
+  transform: scale(1.02);
+  transition: filter .35s ease, transform .35s ease;
+}
+
+.slide.lazy-loaded {
+  filter: none;
+  transform: none;
+  transition: filter .45s ease, transform .45s ease;
+}
 }

@@ -11,6 +11,7 @@
     "start": "node server.js"
   },
   "dependencies": {
+    "framer-motion": "^12.23.24",
     "gsap": "^3.13.0",
     "primeicons": "^7.0.0",
     "primereact": "^10.9.7",

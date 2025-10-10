@@ -1,0 +1,20 @@
+[
+  {
+    "id": 1,
+    "image": "/images/home/banner1.png",
+    "kicker": "New Harvest",
+    "title": "Premium Basmati Rice",
+    "subtitle": "From our fields to your table",
+    "ctaText": "Shop Now",
+    "ctaHref": "/products",
+    "secondary": { "label": "Learn More", "href": "/about" }
+  },
+  {
+    "id": 2,
+    "image": "/images/home/banner2.png",
+    "title": "Sustainably Grown",
+    "subtitle": "Eco-friendly farming practices",
+    "ctaText": "Explore Varieties",
+    "ctaHref": "/varieties"
+  }
+]
