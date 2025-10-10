@@ -1,6 +1,6 @@
 import React from "react";
 import "./Home.css";
-import HeroBanner  from "./HeroBanner/HeroBanner";
+import HeroBanner from "./HeroBanner/HeroBanner";
 
 
 export default function Home() {
