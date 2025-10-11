@@ -32,7 +32,7 @@ body{
 .lazy-image-wrapper {
   position: relative;
   background-color: #f7f7f7;
-  min-height: 1px; /* helps maintain layout */
+  min-height: 100%; /* helps maintain layout */
 }
 
 /* shimmer block that covers the image while loading */

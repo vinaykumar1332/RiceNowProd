@@ -193,7 +193,7 @@ export default function Image({
             width: "100%",
             height: "100%",
             display: "block",
-            objectFit: "cover",
+            objectFit: "contain",
             objectPosition: "center",
             transition: "opacity 420ms cubic-bezier(.2,.9,.2,1), transform 420ms cubic-bezier(.2,.9,.2,1)",
             opacity: loaded ? 1 : 0,
