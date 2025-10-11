@@ -16,5 +16,14 @@
     "subtitle": "Eco-friendly farming practices",
     "ctaText": "Explore Varieties",
     "ctaHref": "/varieties"
+  },
+  {
+    "id": 3,
+    "image": "/images/home/banner3.png",
+    "kicker": "From The Farmer's Hands",
+    "title": "The Soul of Indian Soil",
+    "subtitle": "Direct from the heart of South India's farms.",
+    "ctaText": "Our Story",
+    "ctaHref": "/about"
   }
 ]
