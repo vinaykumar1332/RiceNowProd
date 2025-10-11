@@ -1,0 +1,334 @@
+:root {
+  --bg-gap: 14px;
+  --bg-radius: 12px;
+  --bg-accent: #0ea5a4;
+  --bg-shadow: 0 10px 30px rgba(2, 6, 23, 0.08);
+  --bg-text: #0f172a;
+  --carousel-transition: 420ms;
+  --thumb-aspect: 4 / 3;
+  /* change to 16/9 or 1/1 if you prefer */
+  --visible-count: 4;
+}
+
+/* container */
+.brand-grid-wrapper {
+  padding: 1rem 1.25rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+/* header */
+.bg-header {
+  margin-bottom: .75rem;
+}
+
+.bg-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: var(--bg-text);
+  font-weight: 700;
+}
+
+.bg-sub {
+  margin: 0;
+  color: #6b7280;
+  font-size: .95rem;
+}
+
+/* carousel outer */
+.bg-carousel {
+  position: relative;
+  margin-top: 1rem;
+}
+
+/* GRID - horizontal scroll */
+.bg-grid {
+  display: grid;
+  gap: var(--bg-gap);
+  grid-auto-flow: column;
+  grid-auto-columns: calc((100% - (var(--visible-count) - 1) * var(--bg-gap)) / var(--visible-count));
+  align-items: stretch;
+  /* stretch columns to equal height */
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 8px;
+  scrollbar-width: thin;
+  scroll-behavior: smooth;
+}
+
+/* scrollbar look */
+.bg-grid::-webkit-scrollbar {
+  height: 8px;
+}
+
+.bg-grid::-webkit-scrollbar-thumb {
+  background: rgba(11, 17, 20, 0.12);
+  border-radius: 999px;
+}
+
+/* ITEM WRAPPER */
+.bg-card-item {
+  width: 100%;
+  display: flex;
+  align-items: stretch;
+  /* stretch child (.bg-card) to full height */
+  scroll-snap-align: start;
+}
+
+/* reset the button */
+.bg-card-btn {
+  border: none;
+  background: transparent;
+  padding: 0;
+  display: block;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* CARD - entrance animation initial state + normal layout */
+.bg-card {
+  border-radius: var(--bg-radius);
+  overflow: hidden;
+  background: #fff;
+  box-shadow: var(--bg-shadow);
+  transition: transform var(--carousel-transition) cubic-bezier(.2, .9, .2, 1), box-shadow .14s ease, opacity .42s ease;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 220px;
+  width: 220px;
+  /* entrance animation start: invisible and moved down a touch */
+  opacity: 0;
+  transform: translateY(10px) scale(0.995);
+  will-change: transform, opacity;
+
+  @media (max-width:576px) {
+    width: 190px;
+  }
+
+  @media (max-width:378px) {
+    width: 160px;
+  }
+
+  @media (min-width:1001px) {
+     width: 260px;
+  }
+}
+
+/* when in view (added by IntersectionObserver) */
+.bg-card.in-view {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* THUMB - fixed aspect */
+.bg-thumb-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: var(--thumb-aspect);
+  background: linear-gradient(180deg, #f7f7f7, #efefef);
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+
+/* Ensure images fill thumb box (object-fit: cover gives consistent visual) */
+.bg-thumb-img,
+.bg-thumb-img .internal-img,
+.bg-thumb-img img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+  object-position: center;
+}
+
+/* placeholder uses same size */
+.bg-thumb-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  color: white;
+  background: linear-gradient(135deg, var(--bg-accent), #0b7280);
+}
+
+/* badge */
+.bg-badge {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: .85rem;
+  box-shadow: 0 8px 28px rgba(2, 6, 23, 0.12);
+  z-index: 2;
+}
+
+/* BODY - consistent padding and predictable height */
+.bg-body {
+  padding: .9rem 1rem 1rem;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+/* normalize text margins (avoid extra vertical gaps) */
+.bg-name {
+  margin: 0;
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--bg-text);
+  line-height: 1.2;
+}
+
+.bg-desc {
+  margin: .35rem 0 0;
+  color: #6b7280;
+  font-size: .95rem;
+  line-height: 1.2;
+}
+
+/* hover / focus visuals - keep hover lift subtle to not conflict with animation */
+.bg-card-btn:focus .bg-card,
+.bg-card-btn:hover .bg-card {
+  transform: translateY(-6px) scale(1.002);
+  box-shadow: 0 18px 48px rgba(2, 6, 23, 0.12);
+}
+
+.bg-card-btn:focus {
+  outline: none;
+}
+
+.bg-card-btn:focus .bg-card {
+  box-shadow: 0 28px 60px rgba(2, 6, 23, 0.14);
+  transform: translateY(-8px) scale(1.002);
+}
+
+/* SKELETON (match shapes exactly) */
+.bg-skeleton-card {
+  border-radius: var(--bg-radius);
+  overflow: hidden;
+  background: #fff;
+  box-shadow: var(--bg-shadow);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.bg-thumb-skeleton {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.04) 0%, rgba(0, 0, 0, 0.06) 50%, rgba(0, 0, 0, 0.04) 100%);
+  animation: skeleton-shimmer 1.4s linear infinite;
+  aspect-ratio: var(--thumb-aspect);
+  flex: 0 0 auto;
+}
+
+.bg-line-skel {
+  height: 12px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.04) 0%, rgba(0, 0, 0, 0.06) 50%, rgba(0, 0, 0, 0.04) 100%);
+  animation: skeleton-shimmer 1.4s linear infinite;
+  margin-bottom: 8px;
+}
+
+.bg-line-skel.title {
+  width: 60%;
+  height: 16px;
+  margin-top: 10px;
+}
+
+.bg-line-skel.desc {
+  width: 40%;
+  height: 12px;
+}
+
+/* shimmer keyframes */
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: -200px 0;
+  }
+
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+
+/* controls */
+.bg-carousel-control {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(11, 17, 20, 0.04);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 20px rgba(2, 6, 23, 0.06);
+  cursor: pointer;
+  z-index: 5;
+}
+
+.bg-carousel-control:focus {
+  outline: 3px solid rgba(14, 165, 164, 0.14);
+  outline-offset: 4px;
+}
+
+.bg-carousel-control.prev {
+  left: 8px;
+}
+
+.bg-carousel-control.next {
+  right: 8px;
+}
+
+.bg-carousel-control[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.bg-arrow {
+  font-size: 20px;
+  line-height: 1;
+}
+
+/* responsive visible-count adjustments (mobile shows 2 cards now) */
+@media (max-width: 1100px) {
+  :root {
+    --visible-count: 3;
+  }
+}
+
+@media (max-width: 760px) {
+  :root {
+    --visible-count: 2;
+  }
+}
+
+/* show 2 cards on very small devices (<=420px) */
+@media (max-width: 420px) {
+  :root {
+    --visible-count: 2;
+  }
+}
+
+/* error / empty */
+.bg-error,
+.bg-empty {
+  padding: 1.2rem;
+  border-radius: 10px;
+  background: rgba(2, 6, 23, 0.02);
+  color: #6b7280;
+}
