@@ -1,0 +1,50 @@
+{
+  "brand": {
+    "name": "RiceNow",
+    "tagline": "Farm-fresh rice delivered to your door",
+    "description": "RiceNow connects you with trusted local farmers to bring the best, sustainably-grown rice. From aromatic basmati to nutritious brown rice — we handpick every bag to meet quality standards and ensure freshness.",
+    "logoAlt": "RiceNow logo"
+  },
+  "contact": {
+    "addressLines": [
+
+    ],
+    "phone": "99********",
+    "email": "hello@ricenow.com"
+  },
+  "socials": [
+    { "name": "facebook", "label": "Facebook", "url": "https://facebook.com/ricenow" },
+    { "name": "instagram", "label": "Instagram", "url": "https://instagram.com/ricenow" },
+    { "name": "twitter", "label": "Twitter", "url": "https://twitter.com/ricenow" },
+    { "name": "youtube", "label": "YouTube", "url": "https://youtube.com/ricenow" },
+    { "name": "linkedin", "label": "LinkedIn", "url": "https://linkedin.com/company/ricenow" }
+  ],
+  "quickLinks": [
+    { "label": "Shop All", "href": "/products" },
+    { "label": "Categories", "href": "/categories" },
+    { "label": "About Us", "href": "/about" },
+    { "label": "Recipes", "href": "/recipes" },
+    { "label": "Blog", "href": "/blog" }
+  ],
+  "company": [
+    { "label": "Careers", "href": "/careers" },
+    { "label": "Sustainability", "href": "/sustainability" },
+    { "label": "Wholesale", "href": "/wholesale" },
+    { "label": "Contact", "href": "/contact" },
+    { "label": "FAQ", "href": "/faq" }
+  ],
+  "legal": [
+    { "label": "Terms & Conditions", "href": "/terms" },
+    { "label": "Privacy Policy", "href": "/privacy" },
+    { "label": "Refund Policy", "href": "/refund" }
+  ],
+  "newsletter": {
+    "title": "Stay up to date",
+    "subtitle": "Get offers, recipes and farm stories. No spam."
+  },
+  "copyright": {
+    "owner": "RiceNow",
+    "year": 2025,
+    "note": "All rights reserved."
+  }
+}

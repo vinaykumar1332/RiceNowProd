@@ -20,3 +20,37 @@ body{
   color: var(--text-color);
   transition: background-color 0.3s, color 0.3s;
 }
+
+
+::-webkit-scrollbar-thumb {
+  background: var(--accent-color);
+  border-radius: 10px;
+}
+
+
+/* Image lazy skeleton shimmer */
+.lazy-image-wrapper {
+  position: relative;
+  background-color: #f7f7f7;
+  min-height: 1px; /* helps maintain layout */
+}
+
+/* shimmer block that covers the image while loading */
+.img-skeleton {
+  background: linear-gradient(90deg, rgba(0,0,0,0.04) 0%, rgba(0,0,0,0.06) 50%, rgba(0,0,0,0.04) 100%);
+  background-size: 240% 100%;
+  animation: img-skeleton-shimmer 1.4s linear infinite;
+  border-radius: 4px;
+}
+
+/* small accessible focus styles (if container receives focus) */
+.lazy-image-wrapper:focus {
+  outline: 3px solid rgba(14,165,164,0.12);
+  outline-offset: 2px;
+}
+
+/* shimmer animation */
+@keyframes img-skeleton-shimmer {
+  0% { background-position: -120% 0; }
+  100% { background-position: 120% 0; }
+}

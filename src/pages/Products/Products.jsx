@@ -1,7 +1,7 @@
 // src/components/Products/Products.jsx
 import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import PropTypes from "prop-types";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import Cards from "./cards/cards";
 import "./Products.css";
 import { FaFilter } from "react-icons/fa6";
@@ -49,20 +49,12 @@ function computeStableKey(product) {
 }
 
 /* ---------- Refresh Button (inlined) ---------- */
-/*
- - Now uses `visible` prop to control when it SHOULD be visible.
- - Internally uses a short delay that transitions it into DOM-visible state,
-   but it always renders to allow CSS slide animation when toggling .hidden.
- - Clicking the refresh calls onRefresh and parent is expected to hide the control,
-   per your "hide after click" requirement.
-*/
 function RefreshBtn({
   visible = false,
   delayMs = 300,
   onRefresh = () => {},
   busy = false,
 }) {
-  // "mounted shown" state — allows initial delay before animating in
   const [mounted, setMounted] = useState(false);
   const [iconOnly, setIconOnly] = useState(false);
   const mountTimer = useRef(null);
@@ -70,14 +62,11 @@ function RefreshBtn({
 
   useEffect(() => {
     if (visible) {
-      // delay slightly to avoid jank on page load
       clearTimeout(mountTimer.current);
       mountTimer.current = setTimeout(() => setMounted(true), delayMs);
-      // then switch to icon-only after a bit
       clearTimeout(iconTimer.current);
       iconTimer.current = setTimeout(() => setIconOnly(true), 1800);
     } else {
-      // hide immediately
       clearTimeout(mountTimer.current);
       clearTimeout(iconTimer.current);
       setMounted(false);
@@ -93,11 +82,9 @@ function RefreshBtn({
     e?.stopPropagation();
     if (busy) return;
     onRefresh && onRefresh();
-    // Clicking should immediately go to icon-only for visual feedback
     setIconOnly(true);
   };
 
-  // Always render the DOM container. Use `hidden` class to slide away.
   const wrapperClass = `refresh-overlay-wrapper ${mounted && visible ? "" : "hidden"}`;
 
   return (
@@ -125,7 +112,7 @@ RefreshBtn.propTypes = {
   busy: PropTypes.bool,
 };
 
-/* ---------- Image candidate resolver (used by CartDrawer etc) ---------- */
+/* ---------- Image candidate resolver ---------- */
 function resolveImageCandidate(candidate) {
   if (!candidate) return { imageUrl: null, imageId: null };
 
@@ -144,8 +131,7 @@ function resolveImageCandidate(candidate) {
   return { imageUrl: null, imageId: s };
 }
 
-/* ---------- Main Products component ---------- */
-/* ---------- CACHING HELPERS (localStorage + sessionStorage fallback) ---------- */
+/* ---------- CACHING HELPERS ---------- */
 const CACHE_KEY = "rice_products_cache_v1";
 const CACHE_META_KEY = "rice_products_meta_v1";
 const DEFAULT_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
@@ -500,8 +486,7 @@ FilterPanel.propTypes = {
   onReset: PropTypes.func.isRequired,
 };
 
-/* ---------- ProductDetailsOverlay (carousel) ---------- */
-// (kept unchanged from your file for brevity — you already have this)
+/* ---------- ProductDetailsOverlay (kept mostly as-is) ---------- */
 function ProductDetailsOverlay({ product, onClose, onAdd, onRemove, qty }) {
   if (!product) return null;
   const { title, description, images, image, weight, tags, tags_array, brand } = product;
@@ -648,6 +633,7 @@ ProductDetailsOverlay.propTypes = {
 /* ---------- Main Products component ---------- */
 export default function Products() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [products, setProducts] = useState([]);
   const [raw, setRaw] = useState([]);
@@ -683,9 +669,9 @@ export default function Products() {
   const [selectedCategory, setSelectedCategory] = useState(null);
 
   // refresh button visibility / busy + dismissal control
-  const [refreshVisible, setRefreshVisible] = useState(false); // whether it should be visible (subject to userDismissed)
+  const [refreshVisible, setRefreshVisible] = useState(false);
   const [refreshBusy, setRefreshBusy] = useState(false);
-  const [userDismissed, setUserDismissed] = useState(false); // true after user clicks the button (hides)
+  const [userDismissed, setUserDismissed] = useState(false);
 
   const priceRanges = useMemo(
     () => [
@@ -697,6 +683,7 @@ export default function Products() {
     []
   );
 
+  // helper to extract products from various possible shapes
   const extractProducts = (data) => {
     if (Array.isArray(data)) return data;
     if (Array.isArray(data?.products)) return data.products;
@@ -827,7 +814,6 @@ export default function Products() {
         setCurrentFilter((c) => ({ ...c, maxPrice: processed.maxPrice }));
 
         const age = now - (cached.meta?.fetchedAt || 0);
-        // Show refresh hint if cache is older than half the TTL
         if (age > useTTLMs / 2 && !userDismissed) {
           setRefreshVisible(true);
         } else {
@@ -871,7 +857,6 @@ export default function Products() {
           console.warn(msg, " — serving cached data");
           setLoading(false);
           setRefreshBusy(false);
-          // keep refresh visible so users can attempt manual refresh
           setRefreshVisible(!userDismissed);
           return;
         }
@@ -934,9 +919,8 @@ export default function Products() {
         fetchedAt: Date.now(),
       });
 
-      // hide refresh hint because we've got fresh data
       setRefreshVisible(false);
-      setUserDismissed(false); // reset dismissal after successful fresh fetch
+      setUserDismissed(false);
     } catch (err) {
       console.error("Failed to fetch products", err);
       setError(err.message || "Failed to fetch products");
@@ -946,7 +930,6 @@ export default function Products() {
         const uniqueRows = dedupeByKey(rows);
         setRaw(uniqueRows);
         setProducts(uniqueRows);
-        // keep refresh visible so user can try again unless user dismissed
         setRefreshVisible(!userDismissed);
       }
     } finally {
@@ -959,7 +942,69 @@ export default function Products() {
     fetchProducts({ useTTLMs: DEFAULT_CACHE_TTL_MS, force: false });
   }, [fetchProducts]);
 
-  /* ---------- Filtering / search ---------- */
+  /* ---------- URL → filter sync (brand & category) ----------
+     - Reads both ?brand= and ?category= from the URL (location.search)
+     - Applies them to currentFilter.brand and selectedCategory respectively
+     - Does not overwrite user choices unnecessarily; only updates when param differs
+  */
+  useEffect(() => {
+    const params = new URLSearchParams(location.search || "");
+    const brandParam = params.get("brand");
+    const categoryParam = params.get("category");
+
+    // Handle brand param (existing behavior kept, now coexists with category)
+    if (brandParam) {
+      const brandValue = decodeURIComponent(brandParam).trim();
+      setCurrentFilter((c) => {
+        if (String(c.brand) === String(brandValue)) return c;
+        return { ...c, brand: brandValue };
+      });
+    } else {
+      // If URL has no brand, only reset if current filter was set from URL previously.
+      setCurrentFilter((c) => (c.brand ? { ...c, brand: null } : c));
+    }
+
+    // Handle category param:
+    if (categoryParam) {
+      const catValue = decodeURIComponent(categoryParam).trim();
+      // setSelectedCategory so the filtering effect uses it (selectedCategory is used in filtering)
+      setSelectedCategory((prev) => {
+        if (String(prev) === String(catValue)) return prev;
+        return catValue;
+      });
+
+      // Optionally, also place the category into currentFilter.tags if tags were empty,
+      // so UI filter chips reflect the URL-driven category (without overwriting user-set tags).
+      setCurrentFilter((c) => {
+        const existingTags = Array.isArray(c.tags) ? c.tags : [];
+        const normalized = String(catValue);
+        if (existingTags.length === 0) {
+          return { ...c, tags: [normalized] };
+        }
+        // if tags already include the category, leave as-is
+        if (existingTags.some((t) => String(t).trim().toLowerCase() === normalized.toLowerCase())) {
+          return c;
+        }
+        // otherwise don't force-add (avoid surprising user's explicit tag selection)
+        return c;
+      });
+    } else {
+      // If URL has no category, do not force-clear user selection unless it was set previously by URL.
+      // We'll reset selectedCategory only if it matches nothing in filters.tags or is empty:
+      setSelectedCategory((prev) => {
+        if (!prev) return prev;
+        // If currentFilter.tags includes prev, keep it; otherwise clear
+        const tags = currentFilter.tags || [];
+        if (tags.some((t) => String(t).trim().toLowerCase() === String(prev).trim().toLowerCase())) {
+          return prev;
+        }
+        return null;
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search]);
+
+  /* ---------- Filtering / search (applies brand from currentFilter and selectedCategory) ---------- */
   useEffect(() => {
     const q = (searchQuery || "").trim().toLowerCase();
 
@@ -977,8 +1022,10 @@ export default function Products() {
 
       if (pPrice > (currentFilter.maxPrice ?? Number.POSITIVE_INFINITY)) return false;
 
-      const pBrand = p.brand ?? p.manufacturer ?? p.mfg ?? p.vendor ?? null;
-      if (currentFilter.brand && String(pBrand) !== String(currentFilter.brand)) return false;
+      const pBrand = (p.brand ?? p.manufacturer ?? p.mfg ?? p.vendor ?? "");
+      if (currentFilter.brand) {
+        if (String(pBrand).trim().toLowerCase() !== String(currentFilter.brand).trim().toLowerCase()) return false;
+      }
 
       if (currentFilter.kgs) {
         const pWeight = p.weight ?? p.weight_text ?? p.unit ?? "";
@@ -1119,6 +1166,20 @@ export default function Products() {
       priceRanges: [],
       tags: [],
     });
+    // also remove brand and category params from URL if present
+    const params = new URLSearchParams(location.search || "");
+    let changed = false;
+    if (params.has("brand")) {
+      params.delete("brand");
+      changed = true;
+    }
+    if (params.has("category")) {
+      params.delete("category");
+      changed = true;
+    }
+    if (changed) {
+      navigate({ pathname: location.pathname, search: params.toString() }, { replace: true });
+    }
   };
 
   const handleCheckout = () => {
@@ -1134,8 +1195,7 @@ export default function Products() {
   };
 
   /* ---------- Scroll & Overlay logic for refresh button ---------- */
-  // Show when scroll >= threshold or when overlay opens.
-  const SCROLL_THRESHOLD = 0.30; // 30%
+  const SCROLL_THRESHOLD = 0.30;
   const scrollListenerRef = useRef(null);
 
   useEffect(() => {
@@ -1151,20 +1211,14 @@ export default function Products() {
         const scrollable = Math.max(docHeight - winH, 1);
         const percent = scrollTop / scrollable;
         if (percent >= SCROLL_THRESHOLD) {
-          // only show if user hasn't dismissed explicitly
           if (!userDismissed) setRefreshVisible(true);
         } else {
-          // hide if below threshold (unless overlay open)
           if (!selectedProduct) setRefreshVisible(false);
         }
-      } catch (e) {
-        // ignore
-      }
+      } catch (e) {}
     };
 
-    // initial check
     onScroll();
-
     window.addEventListener("scroll", onScroll, { passive: true });
     scrollListenerRef.current = onScroll;
     return () => {
@@ -1173,32 +1227,25 @@ export default function Products() {
     };
   }, [userDismissed, selectedProduct]);
 
-  // When user opens overlay (selects product) show refresh and reset dismissal
   useEffect(() => {
     if (selectedProduct) {
       setRefreshVisible(true);
       setUserDismissed(false);
     } else {
-      // if overlay closes, let scroll listener decide visibility
-      // we run the scroll listener manually so UI updates immediately
       if (scrollListenerRef.current) scrollListenerRef.current();
     }
   }, [selectedProduct]);
 
   /* ---------- Refresh handlers ---------- */
   const handleManualRefresh = async () => {
-    // Clear rice-related data from sessionStorage and localStorage
-    invalidateCache(); // Clears rice_products_cache_v1 and rice_products_meta_v1 from localStorage/sessionStorage
+    invalidateCache();
     try {
       sessionStorage.removeItem("cart");
     } catch (e) {
       console.warn("Failed to clear cart from sessionStorage:", e);
     }
-    setCart([]); // Reset cart state
-
-    // Force fetch and hide UI (hide immediately on click)
+    setCart([]);
     setRefreshBusy(true);
-    // hide right away after click
     setRefreshVisible(false);
     setUserDismissed(true);
     try {
@@ -1242,7 +1289,6 @@ export default function Products() {
             />
           </div>
 
-          {/* small helper: last updated (optional) */}
           <div className="Date-card">
             {(() => {
               const meta = readLocalJSON(CACHE_META_KEY);
@@ -1325,7 +1371,6 @@ export default function Products() {
         qty={cartQtyMap.get(selectedProduct?.id ?? selectedProduct?.title) ?? 0}
       />
 
-      {/* Floating refresh button (bottom-left). It will slide in/out using the .hidden class */}
       <RefreshBtn
         visible={refreshVisible}
         delayMs={220}

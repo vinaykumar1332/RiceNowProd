@@ -98,7 +98,7 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  min-height: 220px;
+  min-height: 250px;
   width: 220px;
   /* entrance animation start: invisible and moved down a touch */
   opacity: 0;
@@ -132,6 +132,9 @@
   background: linear-gradient(180deg, #f7f7f7, #efefef);
   overflow: hidden;
   flex: 0 0 auto;
+  @media (max-width:576px) {
+     height: 201px;
+  }
 }
 
 /* Ensure images fill thumb box (object-fit: cover gives consistent visual) */
@@ -268,8 +271,8 @@
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  width: 44px;
-  height: 44px;
+  width: 34px;
+  height: 34px;
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.95);
   border: 1px solid rgba(11, 17, 20, 0.04);
@@ -331,4 +334,11 @@
   border-radius: 10px;
   background: rgba(2, 6, 23, 0.02);
   color: #6b7280;
+}
+
+/*Popular CategoryGrid*/
+.brand-grid-wrapper.popular-product{
+.bg-card {
+    opacity: 1 !important;
+}
 }
