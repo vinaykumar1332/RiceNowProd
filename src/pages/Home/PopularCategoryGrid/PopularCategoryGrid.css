@@ -1,5 +1,19 @@
 /* PopularCategoryGrid.css - unique isolated styles (prefix: pcg-) */
 
+/* --- variables --- */
+:root {
+  --pcg-gap: 16px;
+  --pcg-radius: 12px;
+  --pcg-accent: #0a7;
+  --pcg-accent-dark: #0b7280;
+  --pcg-shadow: 0 10px 30px rgba(2, 6, 23, 0.08);
+  --pcg-text: #0f172a;
+  --pcg-muted: #6b7280;
+  --pcg-buy-size: 42px;
+  --pcg-buy-font: 0.9rem;
+}
+
+/* container */
 .popular-category-grid-wrapper {
   padding: 1rem 1.25rem;
   max-width: 1200px;
@@ -14,19 +28,19 @@
 .pcg-header h2 {
   margin: 0;
   font-size: 1.5rem;
-  color: #0f172a;
+  color: var(--pcg-text);
   font-weight: 700;
 }
 .pcg-sub {
   margin: 0;
-  color: #6b7280;
+  color: var(--pcg-muted);
   font-size: 0.95rem;
 }
 
 /* grid layout */
 .pcg-grid {
   display: grid;
-  gap: 16px;
+  gap: var(--pcg-gap);
   grid-template-columns: repeat(2, 1fr);
   align-items: stretch;
 }
@@ -56,28 +70,33 @@
   display: flex;
   flex-direction: column;
   background: #fff;
-  border-radius: 12px;
+  border-radius: var(--pcg-radius);
   overflow: hidden;
-  box-shadow: 0 10px 30px rgba(2, 6, 23, 0.08);
+  box-shadow: var(--pcg-shadow);
   height: 200px;
   opacity: 0;
   transform: translateY(12px) scale(0.98);
-  transition: transform 0.3s cubic-bezier(.2,.9,.2,1), opacity 0.3s ease;
+  transition: transform 0.28s cubic-bezier(.2,.9,.2,1), opacity 0.28s ease, box-shadow 220ms ease;
+  position: relative; /* for absolute buy button */
 }
 .pcg-card.in-view {
   opacity: 1;
   transform: translateY(0) scale(1);
 }
 
-/* hover effect */
+/* hover / focus lift */
 .pcg-card-btn:hover .pcg-card,
 .pcg-card-btn:focus .pcg-card {
   transform: translateY(-6px) scale(1.02);
   box-shadow: 0 18px 48px rgba(2, 6, 23, 0.12);
 }
 .pcg-card-btn:focus {
-  outline: 3px solid rgba(14, 165, 164, 0.12);
-  outline-offset: 4px;
+  outline: none;
+}
+.pcg-card-btn:focus-visible .pcg-card,
+.pcg-card-btn:focus .pcg-card {
+  box-shadow: 0 20px 48px rgba(2, 6, 23, 0.14);
+  transform: translateY(-6px) scale(1.02);
 }
 
 /* thumb */
@@ -88,10 +107,12 @@
   background: linear-gradient(180deg, #f7f7f7, #efefef);
   overflow: hidden;
 }
-.pcg-thumb img {
+.pcg-thumb img,
+.pcg-thumb .lazy-image-wrapper img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
 }
 .pcg-thumb-placeholder {
   display: flex;
@@ -100,7 +121,7 @@
   font-size: 36px;
   color: #fff;
   height: 100%;
-  background: linear-gradient(135deg, var(--accent-color), #0b7280);
+  background: linear-gradient(135deg, var(--pcg-accent), var(--pcg-accent-dark));
 }
 .pcg-badge {
   position: absolute;
@@ -112,27 +133,31 @@
   font-size: 0.85rem;
   padding: 6px 10px;
   border-radius: 999px;
+  box-shadow: 0 6px 18px rgba(11, 17, 23, 0.12);
 }
 
 /* body */
 .pcg-body {
-  padding: 0.9rem 1rem 1rem;
+  padding: 0.9rem 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
 }
 .pcg-name {
   margin: 0;
   font-size: 1rem;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--pcg-text);
 }
 .pcg-desc {
   margin: 0.35rem 0 0;
-  color: #6b7280;
+  color: var(--pcg-muted);
   font-size: 0.95rem;
 }
 
 /* skeleton */
 .pcg-skeleton {
-  border-radius: 12px;
+  border-radius: var(--pcg-radius);
   height: 280px;
   background: linear-gradient(90deg, rgba(0,0,0,0.04) 0%, rgba(0,0,0,0.08) 50%, rgba(0,0,0,0.04) 100%);
   background-size: 240% 100%;
@@ -148,12 +173,159 @@
   padding: 1.2rem;
   border-radius: 10px;
   background: rgba(2,6,23,0.03);
-  color: #6b7280;
+  color: var(--pcg-muted);
   text-align: center;
 }
 
-/* small screens */
+/* ========== BUY NOW button ========== */
+
+/* base button (positioned on card) */
+.pcg-buy-btn {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--pcg-buy-size);
+  padding:0px;
+  border-radius: 999px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-weight: 700;
+
+  font-size: var(--pcg-buy-font);
+  transform-origin: center;
+  transition:
+    transform 200ms cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 200ms cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 200ms ease,
+    background 220ms ease;
+  z-index: 6;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* icon inside the button */
+.pcg-buy-icon {
+  width: 18px;
+  height: 18px;
+  display: inline-block;
+  transform-origin: center;
+  color: var(--pcg-accent);
+  transition: 
+    transform 240ms cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 180ms ease;
+}
+
+/* label */
+.pcg-buy-label {
+  display: inline-block;
+  line-height: 1;
+  transform-origin: left center;
+}
+
+/* hover / focus for buy */
+.pcg-buy-btn:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 12px 32px rgba(11, 17, 23, 0.16);
+  background: linear-gradient(90deg, #0d9a99, #0a6b77);
+}
+.pcg-buy-btn:hover .pcg-buy-icon {
+  transform: scale(1.1) rotate(5deg);
+}
+.pcg-buy-btn:active {
+  transform: translateY(-1px) scale(0.98);
+  transition-duration: 100ms;
+}
+.pcg-buy-btn:active .pcg-buy-icon {
+  transform: translateX(2px) rotate(360deg) scale(1.05);
+}
+.pcg-buy-btn:focus {
+  outline: 3px solid rgba(14,165,164,0.2);
+  outline-offset: 3px;
+}
+
+/* small-screen: icon-only */
+@media (max-width: 420px) {
+  .pcg-buy-btn { height: 36px; padding: 6px 8px; gap: 6px; }
+  .pcg-buy-label { display: none; } /* conserve space on narrow screens */
+}
+
+/* enhanced click feedback pop: add class .pcg-buy-pop to trigger; JS can add/remove */
+@keyframes pcg-pop {
+  0% { 
+    transform: scale(1) translateY(0);
+    box-shadow: 0 8px 22px rgba(11, 17, 23, 0.12);
+  }
+  40% { 
+    transform: scale(1.12) translateY(-3px);
+    box-shadow: 0 20px 40px rgba(11, 17, 23, 0.18);
+  }
+  100% { 
+    transform: scale(1) translateY(0);
+    box-shadow: 0 8px 22px rgba(11, 17, 23, 0.12);
+  }
+}
+.pcg-buy-btn.pcg-buy-pop {
+  animation: pcg-pop 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* enhanced icon micro-gesture when clicking */
+.pcg-buy-btn:active .pcg-buy-icon,
+.pcg-buy-btn.pcg-buy-pop .pcg-buy-icon {
+  animation: pcg-icon-bounce 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+@keyframes pcg-icon-bounce {
+  0% { 
+    transform: translateX(0) rotate(0deg) scale(1);
+  }
+  50% { 
+    transform: translateX(4px) rotate(180deg) scale(1.1);
+  }
+  100% { 
+    transform: translateX(0) rotate(360deg) scale(1);
+  }
+}
+
+/* Disabled state (if you programmatically disable) */
+.pcg-buy-btn[disabled],
+.pcg-buy-btn.disabled {
+  opacity: 0.6;
+  pointer-events: none;
+  transform: none;
+  background: linear-gradient(90deg, rgba(14,165,164,0.6), rgba(11,114,128,0.6));
+}
+
+/* Accessible focus ring for whole card when keyboard navigating */
+.pcg-card-btn:focus-visible .pcg-card {
+  box-shadow: 0 24px 48px rgba(2,6,23,0.16);
+  transform: translateY(-6px) scale(1.02);
+}
+
+/* staggered reveal delays for nicer entrance when many cards */
+.pcg-grid .pcg-card { transition-delay: 0ms; }
+.pcg-grid .pcg-card.in-view:nth-child(1) { transition-delay: 40ms; }
+.pcg-grid .pcg-card.in-view:nth-child(2) { transition-delay: 80ms; }
+.pcg-grid .pcg-card.in-view:nth-child(3) { transition-delay: 120ms; }
+.pcg-grid .pcg-card.in-view:nth-child(4) { transition-delay: 160ms; }
+.pcg-grid .pcg-card.in-view:nth-child(5) { transition-delay: 200ms; }
+
+/* Respect user's reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .pcg-card,
+  .pcg-buy-btn,
+  .pcg-buy-icon,
+  .pcg-thumb img {
+    transition: none !important;
+    animation: none !important;
+  }
+  .pcg-grid .pcg-card.in-view { opacity: 1; transform: none; }
+}
+
+/* small screens adjustments */
 @media (max-width: 420px) {
   .pcg-header h2 { font-size: 1.2rem; }
   .pcg-card { height: 240px; }
+  :root { --pcg-gap: 12px; }
 }

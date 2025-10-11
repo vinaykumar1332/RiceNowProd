@@ -751,3 +751,9 @@ color: var(--accent-color);
 font-weight: 600;
 font-size: 0.97rem;
 }
+
+.products-section-wrapper{
+  .lazy-image-wrapper.card-img{
+    min-height: 100%;
+  }
+}

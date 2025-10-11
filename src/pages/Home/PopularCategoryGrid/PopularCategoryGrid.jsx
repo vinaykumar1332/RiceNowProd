@@ -3,6 +3,7 @@ import PropTypes from "prop-types";
 import { VITE_PRODUCTS_API } from "../../../API";
 import { saveProductsToSession, loadProductsFromSession } from "../../../utils/storage";
 import Image from "../../../pages/Products/Images/Image";
+import { FaShoppingCart } from "react-icons/fa";
 import "./PopularCategoryGrid.css";
 
 function safeToString(v) {
@@ -22,6 +23,7 @@ function shuffleArray(arr) {
 export default function PopularCategoryGrid({
   fetchUrl = VITE_PRODUCTS_API,
   onCategoryClick = null,
+  onBuyNow = null,
   columns = 4,
   maxCategories = 8,
 }) {
@@ -166,6 +168,26 @@ export default function PopularCategoryGrid({
 
   const skeletonCount = Math.max(4, columns);
 
+  function handleCardClick(c) {
+    if (onCategoryClick) return onCategoryClick(c.category, c.products);
+    window.location.href = `/products?category=${encodeURIComponent(c.category)}`;
+  }
+
+  function handleBuyNow(e, c) {
+    // prevent card click
+    e.stopPropagation();
+    e.preventDefault();
+    const firstProduct = Array.isArray(c.products) && c.products.length ? c.products[0] : null;
+    if (typeof onBuyNow === "function") {
+      onBuyNow(c.category, firstProduct);
+      return;
+    }
+    // fallback behavior: navigate to products page with buy hint
+    const buyId = firstProduct?.id ?? firstProduct?.sku ?? encodeURIComponent(firstProduct?.title ?? "");
+    const url = buyId ? `/products?category=${encodeURIComponent(c.category)}&buy=${encodeURIComponent(buyId)}` : `/products?category=${encodeURIComponent(c.category)}`;
+    window.location.href = url;
+  }
+
   return (
     <section className="popular-category-grid-wrapper" aria-labelledby="pcg-title">
       <div className="pcg-header">
@@ -184,33 +206,45 @@ export default function PopularCategoryGrid({
       ) : categories.length === 0 ? (
         <div className="pcg-empty">No popular categories found.</div>
       ) : (
-        <div className="pcg-grid" ref={containerRef}>
+        <div className="pcg-grid" ref={containerRef} style={{ ["--pcg-columns"]: columns }}>
           {categories.map((c) => (
             <button
               key={c.category}
               type="button"
               className="pcg-card-btn"
-              onClick={() =>
-                onCategoryClick
-                  ? onCategoryClick(c.category, c.products)
-                  : (window.location.href = `/products?category=${encodeURIComponent(c.category)}`)
-              }
+              onClick={() => handleCardClick(c)}
+              title={`View products in ${c.category}`}
             >
-              <article className="pcg-card">
+              <article className="pcg-card" aria-label={`${c.category} category`}>
                 <div className="pcg-thumb">
                   {c.imageUrl ? (
                     <Image imageUrl={c.imageUrl} alt={`${c.category} image`} size={600} />
                   ) : c.imageId ? (
                     <Image imageId={c.imageId} alt={`${c.category} image`} size={600} />
                   ) : (
-                    <div className="pcg-thumb-placeholder">{c.category?.charAt(0) || "C"}</div>
+                    <div className="pcg-thumb-placeholder" aria-hidden="true">
+                      {c.category?.charAt(0) || "C"}
+                    </div>
                   )}
-                  <span className="pcg-badge">{c.count}</span>
+                  <span className="pcg-badge" aria-hidden="true">{c.count}</span>
                 </div>
+
                 <div className="pcg-body">
                   <h3 className="pcg-name">{c.category}</h3>
                   <p className="pcg-desc">{c.count} products</p>
                 </div>
+
+                {/* Buy Now button - stops propagation so main card click is not triggered */}
+                <button
+                  type="button"
+                  className="pcg-buy-btn"
+                  onClick={(e) => handleBuyNow(e, c)}
+                  aria-label={`Buy now from ${c.category}`}
+                  title={`Buy now from ${c.category}`}
+                >
+                  <FaShoppingCart className="pcg-buy-icon" aria-hidden="true" />
+                  <span className="pcg-buy-label"></span>
+                </button>
               </article>
             </button>
           ))}
@@ -223,6 +257,7 @@ export default function PopularCategoryGrid({
 PopularCategoryGrid.propTypes = {
   fetchUrl: PropTypes.string,
   onCategoryClick: PropTypes.func,
+  onBuyNow: PropTypes.func,
   columns: PropTypes.number,
   maxCategories: PropTypes.number,
 };
