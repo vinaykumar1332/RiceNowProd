@@ -6,6 +6,11 @@ export default function NotFound() {
   return (
     <div className="notfound-container">
       <h1 className="notfound-title">404</h1>
+      <img 
+        src="images/contact/404.jpg" 
+        alt="Page not found illustration" 
+        className="notfound-image" 
+      />
       <p className="notfound-message">
         Oops! The page you are looking for does not exist.
       </p>
