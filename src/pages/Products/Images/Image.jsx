@@ -1,67 +1,60 @@
 import React, { useEffect, useRef, useState } from "react";
 import PropTypes from "prop-types";
+import "./Image.css";
+
 
 export default function Image({
-  imageId,
   imageUrl,
-  alt,
-  size = 200,
+  cloudName = "dbgyofocp",
+  publicId, // optional: Cloudinary public id (if imageUrl not supplied)
+  alt = "",
   className = "",
-  style = {},
-  placeholder = null,
+  containerClassName = "",
+  widthHint = 200,
+  heightHint = 200,
+  loadingAttr = "lazy", // forwarded to <img>
 }) {
-  const rootRef = useRef(null);
+  const wrapperRef = useRef(null);
+  const imgRef = useRef(null);
   const [inView, setInView] = useState(false);
-  const [failed, setFailed] = useState(false);
-  const [srcCandidate, setSrcCandidate] = useState(null);
-  const [triedFallback, setTriedFallback] = useState(false);
-
-  // loading / loaded state for shimmer & fade
+  const [src, setSrc] = useState(null);
   const [loading, setLoading] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [failed, setFailed] = useState(false);
 
-  const normalizeId = (id) => {
-    if (!id) return null;
-    return String(id).replace(/[{}]/g, "").trim();
+  // build cloudinary URL if publicId provided and no imageUrl
+  const buildCloudinary = (cn, pid) => {
+    if (!cn || !pid) return null;
+    // Use auto-format & auto-quality as a good default
+    return `https://res.cloudinary.com/${cn}/image/upload/f_auto,q_auto/${encodeURIComponent(
+      pid
+    )}`;
   };
 
-  const buildThumbnail = (id, sz) => {
-    const clean = normalizeId(id);
-    if (!clean) return null;
-    return `https://drive.google.com/thumbnail?id=${encodeURIComponent(clean)}&sz=${encodeURIComponent(sz)}`;
-  };
-
-  const buildUcFallback = (id) => {
-    const clean = normalizeId(id);
-    if (!clean) return null;
-    return `https://drive.google.com/uc?export=view&id=${encodeURIComponent(clean)}`;
-  };
-
-  // Choose candidate src when props change
+  // choose source candidate (prefer imageUrl)
   useEffect(() => {
     setLoaded(false);
     setFailed(false);
-
+    setLoading(false);
     if (imageUrl && String(imageUrl).trim()) {
-      setSrcCandidate(String(imageUrl).trim());
-      setTriedFallback(true);
+      setSrc(null); // will be assigned when inView
       return;
     }
-
-    if (imageId && String(imageId).trim()) {
-      const thumb = buildThumbnail(imageId, size);
-      setSrcCandidate(thumb);
-      setTriedFallback(false);
+    if (!imageUrl && publicId) {
+      setSrc(null);
       return;
     }
+    // neither provided -> show placeholder only
+    setSrc(null);
+  }, [imageUrl, publicId]);
 
-    setSrcCandidate(null);
-    setTriedFallback(true);
-  }, [imageId, imageUrl, size]);
-
-  // IntersectionObserver to delay loading until near viewport
+  // IntersectionObserver: set inView
   useEffect(() => {
-    if (!rootRef.current) return;
+    const el = wrapperRef.current;
+    if (!el) {
+      setInView(true);
+      return;
+    }
     if (typeof window === "undefined" || !("IntersectionObserver" in window)) {
       setInView(true);
       return;
@@ -72,162 +65,130 @@ export default function Image({
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             setInView(true);
-            try { obs.disconnect(); } catch (e) { /* ignore */ }
+            try {
+              obs.disconnect();
+            } catch (e) {}
           }
         });
       },
       { rootMargin: "250px" }
     );
 
-    obs.observe(rootRef.current);
-
+    obs.observe(el);
     return () => {
-      try { obs.disconnect(); } catch (e) { /* ignore */ }
+      try {
+        obs.disconnect();
+      } catch (e) {}
     };
-  }, [rootRef]);
+  }, []);
 
-  const defaultPlaceholder =
-    placeholder ||
-    "data:image/svg+xml;charset=utf-8," +
-      encodeURIComponent(
-        `<svg xmlns='http://www.w3.org/2000/svg' width='${size}' height='${size}' viewBox='0 0 ${size} ${size}'><rect fill='#eee' width='100%' height='100%'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='#aaa' font-family='sans-serif' font-size='14'>No image</text></svg>`
-      );
+  // when inView, assign final src (imageUrl or cloudinary)
+  useEffect(() => {
+    if (!inView) return;
 
-  // handle image error → try uc fallback for Drive IDs, or mark failed
-  const onImgError = (e) => {
-    if (triedFallback) {
-      setFailed(true);
-      setLoading(false);
-      // console.debug('[Image] final failure for src:', e?.target?.src);
+    if (imageUrl && String(imageUrl).trim()) {
+      setSrc(String(imageUrl).trim());
       return;
     }
-    if (imageId) {
-      const uc = buildUcFallback(imageId);
-      if (uc && uc !== srcCandidate) {
-        // console.debug('[Image] thumbnail failed, trying uc fallback:', uc);
-        setSrcCandidate(uc);
-        setTriedFallback(true);
-        setLoading(true);
-        return;
-      }
+
+    if (!imageUrl && publicId) {
+      const cdn = buildCloudinary(cloudName, publicId);
+      if (cdn) setSrc(cdn);
+      return;
     }
-    setFailed(true);
-    setTriedFallback(true);
-    setLoading(false);
-    // console.debug('[Image] error and no fallback available for src:', e?.target?.src);
-  };
 
-  const onImgLoad = () => {
-    setLoaded(true);
-    setLoading(false);
-  };
+    // nothing to load
+    setSrc(null);
+  }, [inView, imageUrl, publicId, cloudName]);
 
-  // derive final src to actually assign to <img> (only when inView and not failed)
-  const shouldLoad = inView && srcCandidate && !failed;
-  const imgSrc = shouldLoad ? srcCandidate : null;
-
-  // start loading state when imgSrc becomes available
+  // when src changes, start loading state
   useEffect(() => {
-    if (imgSrc) {
+    if (src) {
       setLoading(true);
       setLoaded(false);
+      setFailed(false);
     } else {
       setLoading(false);
-      // keep loaded state if previously loaded a different src (avoid flash)
-      // setLoaded(false);
     }
-  }, [imgSrc]);
+  }, [src]);
+
+  const handleLoad = () => {
+    setLoaded(true);
+    setLoading(false);
+    setFailed(false);
+  };
+
+  const handleError = () => {
+    setFailed(true);
+    setLoading(false);
+  };
+
+  // compute aspect-ratio padding for skeleton if hints provided
+  const aspectPadding =
+    widthHint && heightHint ? `${(heightHint / widthHint) * 100}%` : null;
 
   return (
     <div
-      ref={rootRef}
-      className={`lazy-image-wrapper ${className}`}
-      style={{
-        position: "relative",
-        display: "block",
-        overflow: "hidden",
-        ...style,
-      }}
+      ref={wrapperRef}
+      className={`lazy-image-wrapper ${containerClassName} ${
+        loaded ? "img-loaded" : ""
+      } ${failed ? "img-failed" : ""}`}
+      data-loaded={loaded ? "true" : "false"}
     >
-      {/* Skeleton shimmer while the image is loading (or when no src) */}
-      {(loading || (!imgSrc && !failed)) && (
-        <div
-          className="img-skeleton"
-          aria-hidden="true"
-          style={{
-            position: "absolute",
-            inset: 0,
-            width: "100%",
-            height: "100%",
-          }}
-        />
+      {/* ratio box to reserve space and avoid layout shift */}
+      <div
+        className="img-ratio"
+        style={aspectPadding ? { paddingBottom: aspectPadding } : undefined}
+        aria-hidden="true"
+      />
+
+      {/* Skeleton / shimmer */}
+      {(!loaded && !failed) && (
+        <div className={`img-skeleton ${loading ? "loading" : ""}`} />
       )}
 
-      {/* If failed or no candidate, show placeholder SVG (not lazy) */}
-      {!imgSrc && failed && (
+      {/* Actual image */}
+      {src && !failed && (
         <img
-          src={defaultPlaceholder}
-          alt={alt ?? ""}
-          style={{
-            width: "100%",
-            height: "100%",
-            display: "block",
-            objectFit: "contain",
-            objectPosition: "center",
-            opacity: 1,
-          }}
-          aria-hidden={false}
-        />
-      )}
-
-      {/* Real image (renders only when we should load) */}
-      {imgSrc && !failed && (
-        <img
-          src={imgSrc}
-          alt={alt ?? ""}
-          loading="lazy"
+          ref={imgRef}
+          className={`lazy-image ${className} ${loaded ? "loaded" : ""}`}
+          src={src}
+          alt={alt}
+          loading={loadingAttr}
           decoding="async"
-          onError={onImgError}
-          onLoad={onImgLoad}
-          style={{
-            width: "100%",
-            height: "100%",
-            display: "block",
-            objectFit: "contain",
-            objectPosition: "center",
-            transition: "opacity 420ms cubic-bezier(.2,.9,.2,1), transform 420ms cubic-bezier(.2,.9,.2,1)",
-            opacity: loaded ? 1 : 0,
-            transform: loaded ? "translateY(0) scale(1)" : "translateY(6px) scale(0.998)",
-          }}
+          onLoad={handleLoad}
+          onError={handleError}
         />
       )}
 
-      {/* If we haven't started loading yet and no srcCandidate, show placeholder */}
-      {!imgSrc && !failed && !loading && (
-        <img
-          src={defaultPlaceholder}
-          alt={alt ?? ""}
-          style={{
-            width: "100%",
-            height: "100%",
-            display: "block",
-            objectFit: "cover",
-            objectPosition: "center",
-            opacity: 1,
-          }}
-          aria-hidden="true"
-        />
+      {/* Fallback placeholder when failed or when no src available */}
+      {(!src || failed) && (
+        <div className="img-placeholder" role="img" aria-label={alt || "image"}>
+          <svg
+            width="48"
+            height="48"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            aria-hidden="true"
+          >
+            <rect width="24" height="24" rx="3" fill="#f3f4f6" />
+            <path d="M6 15l3-4 2 3 3-4 4 6" stroke="#cbd5e1" strokeWidth="1.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </div>
       )}
     </div>
   );
 }
 
 Image.propTypes = {
-  imageId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   imageUrl: PropTypes.string,
+  cloudName: PropTypes.string,
+  publicId: PropTypes.string,
   alt: PropTypes.string,
-  size: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
   className: PropTypes.string,
-  style: PropTypes.object,
-  placeholder: PropTypes.string,
+  containerClassName: PropTypes.string,
+  widthHint: PropTypes.number,
+  heightHint: PropTypes.number,
+  loadingAttr: PropTypes.oneOf(["lazy", "eager", "auto"]),
 };
