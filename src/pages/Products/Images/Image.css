@@ -1,0 +1,106 @@
+
+.lazy-image-wrapper {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  width: 100%;
+  background-color: transparent;
+  isolation: isolate;
+}
+
+
+.img-ratio {
+  width: 100%;
+  height: 0;
+  padding-bottom: 100%; 
+}
+
+/* Skeleton / shimmer */
+.img-skeleton {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  background: linear-gradient(90deg, #f3f4f6 25%, #eceff1 37%, #f3f4f6 63%);
+  background-size: 400% 100%;
+  opacity: 1;
+  transition: opacity 320ms ease;
+}
+
+/* Only animate when loading class present */
+.img-skeleton.loading {
+  animation: shimmer 1.2s linear infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* image element */
+.lazy-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain; /* keep image aspect ratio and show whole image */
+  object-position: center;
+
+  transform: translateY(6px) scale(0.998);
+  transition:
+    opacity 420ms cubic-bezier(.2,.9,.2,1),
+    transform 420ms cubic-bezier(.2,.9,.2,1);
+  will-change: opacity, transform;
+  display: block;
+  border: 0;
+  background: transparent;
+}
+
+/* when loaded fade in */
+.lazy-image.loaded {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* hide skeleton when loaded or failed */
+.lazy-image-wrapper.img-loaded .img-skeleton,
+.lazy-image-wrapper.img-failed .img-skeleton {
+  opacity: 0.5;
+  pointer-events: none;
+  transition: opacity 260ms ease;
+}
+
+/* placeholder shown when image missing or failed */
+.img-placeholder {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fafafa;
+  color: #94a3b8;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  font-size: 13px;
+  text-align: center;
+  padding: 8px;
+}
+
+/* small responsiveness helpers */
+.lazy-image-wrapper img,
+.lazy-image-wrapper .img-placeholder,
+.lazy-image-wrapper .img-skeleton {
+  max-width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+/* developer hooks you can use externally */
+.lazy-image-wrapper[data-loaded="true"] {
+}
+
+/* optional utilities - override in your app if required */
+.lazy-image--cover .lazy-image { object-fit: cover; }

@@ -347,11 +347,16 @@ function FilterPanel({ open, onClose, filters, current, setCurrent, onReset }) {
   const brands = useMemo(() => Array.from(filters.brands || []), [filters.brands]);
   const kgOptions = useMemo(() => Array.from(filters.kgs || []), [filters.kgs]);
 
+  const handleCloseClick = useCallback((e) => {
+    e.target.blur(); // Blur the close button immediately to prevent focus retention
+    onClose();
+  }, [onClose]);
+
   return (
-    <div className={`filter-panel ${open ? "open" : ""}`} aria-hidden={!open}>
+    <div className={`filter-panel ${open ? "open" : ""}`} aria-hidden={!open} role="dialog" aria-modal={open} aria-label="Filters">
       <div className="filter-head">
         <h3>Filters</h3>
-        <button type="button" className="drawer-close" onClick={onClose} aria-label="Close filters">
+        <button type="button" className="drawer-close" onClick={handleCloseClick} aria-label="Close filters">
           ✕
         </button>
       </div>
@@ -673,6 +678,27 @@ export default function Products() {
   const [refreshBusy, setRefreshBusy] = useState(false);
   const [userDismissed, setUserDismissed] = useState(false);
 
+  // Mount ref to prevent state updates on unmounted component
+  const isMountedRef = useRef(true);
+
+  // Ref for currentFilter to avoid stale closures
+  const currentFilterRef = useRef(currentFilter);
+
+  // Sync currentFilter ref
+  useEffect(() => {
+    currentFilterRef.current = currentFilter;
+  }, [currentFilter]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  // Ref for filter button to manage focus
+  const filterBtnRef = useRef(null);
+
   const priceRanges = useMemo(
     () => [
       { label: "Under ₹100", min: 0, max: 100 },
@@ -782,6 +808,8 @@ export default function Products() {
     const useTTLMs = opts.useTTLMs ?? DEFAULT_CACHE_TTL_MS;
     const force = opts.force ?? false;
 
+    if (!isMountedRef.current) return;
+
     setLoading(true);
     setError(null);
     if (force) setRefreshBusy(true);
@@ -800,18 +828,22 @@ export default function Products() {
       if (cached && !force) {
         const rows = extractProducts(cached.data);
         const uniqueRows = dedupeByKey(rows);
-        setRaw(uniqueRows);
-        setProducts(uniqueRows);
+        if (isMountedRef.current) {
+          setRaw(uniqueRows);
+          setProducts(uniqueRows);
+        }
 
         const processed = processFilters(uniqueRows);
-        setFilters({
-          brands: processed.brands,
-          kgs: processed.kgs,
-          tags: processed.tags,
-          minPrice: processed.minPrice,
-          maxPrice: processed.maxPrice,
-        });
-        setCurrentFilter((c) => ({ ...c, maxPrice: processed.maxPrice }));
+        if (isMountedRef.current) {
+          setFilters({
+            brands: processed.brands,
+            kgs: processed.kgs,
+            tags: processed.tags,
+            minPrice: processed.minPrice,
+            maxPrice: processed.maxPrice,
+          });
+          setCurrentFilter((c) => ({ ...c, maxPrice: processed.maxPrice }));
+        }
 
         const age = now - (cached.meta?.fetchedAt || 0);
         if (age > useTTLMs / 2 && !userDismissed) {
@@ -821,8 +853,10 @@ export default function Products() {
         }
 
         if (age <= useTTLMs) {
-          setLoading(false);
-          setRefreshBusy(false);
+          if (isMountedRef.current) {
+            setLoading(false);
+            setRefreshBusy(false);
+          }
           return;
         }
       }
@@ -844,9 +878,11 @@ export default function Products() {
         writeCachedProducts(cached.data, {
           fetchedAt: Date.now(),
         });
-        setLoading(false);
-        setRefreshBusy(false);
-        setRefreshVisible(false);
+        if (isMountedRef.current) {
+          setLoading(false);
+          setRefreshBusy(false);
+          setRefreshVisible(false);
+        }
         return;
       }
 
@@ -855,9 +891,11 @@ export default function Products() {
         const msg = `Fetch error ${res.status}${text ? `: ${text}` : ""}`;
         if (cached && cached.data) {
           console.warn(msg, " — serving cached data");
-          setLoading(false);
-          setRefreshBusy(false);
-          setRefreshVisible(!userDismissed);
+          if (isMountedRef.current) {
+            setLoading(false);
+            setRefreshBusy(false);
+            setRefreshVisible(!userDismissed);
+          }
           return;
         }
         throw new Error(msg);
@@ -889,28 +927,34 @@ export default function Products() {
           hash: responseHash || prevHash || null,
           fetchedAt: Date.now(),
         });
-        setLoading(false);
-        setRefreshBusy(false);
-        setRefreshVisible(false);
+        if (isMountedRef.current) {
+          setLoading(false);
+          setRefreshBusy(false);
+          setRefreshVisible(false);
+        }
         return;
       }
 
       const rows = extractProducts(data);
       const uniqueRows = dedupeByKey(rows);
 
-      setRaw(uniqueRows);
-      setProducts(uniqueRows);
+      if (isMountedRef.current) {
+        setRaw(uniqueRows);
+        setProducts(uniqueRows);
+      }
 
       const processed = processFilters(uniqueRows);
-      setFilters({
-        brands: processed.brands,
-        kgs: processed.kgs,
-        tags: processed.tags,
-        minPrice: processed.minPrice,
-        maxPrice: processed.maxPrice,
-      });
+      if (isMountedRef.current) {
+        setFilters({
+          brands: processed.brands,
+          kgs: processed.kgs,
+          tags: processed.tags,
+          minPrice: processed.minPrice,
+          maxPrice: processed.maxPrice,
+        });
 
-      setCurrentFilter((c) => ({ ...c, maxPrice: processed.maxPrice }));
+        setCurrentFilter((c) => ({ ...c, maxPrice: processed.maxPrice }));
+      }
 
       writeCachedProducts(data, {
         etag: newEtag,
@@ -919,24 +963,32 @@ export default function Products() {
         fetchedAt: Date.now(),
       });
 
-      setRefreshVisible(false);
-      setUserDismissed(false);
+      if (isMountedRef.current) {
+        setRefreshVisible(false);
+        setUserDismissed(false);
+      }
     } catch (err) {
       console.error("Failed to fetch products", err);
-      setError(err.message || "Failed to fetch products");
+      if (isMountedRef.current) {
+        setError(err.message || "Failed to fetch products");
+      }
       const cached = readCachedProducts();
       if (cached && cached.data) {
         const rows = extractProducts(cached.data);
         const uniqueRows = dedupeByKey(rows);
-        setRaw(uniqueRows);
-        setProducts(uniqueRows);
-        setRefreshVisible(!userDismissed);
+        if (isMountedRef.current) {
+          setRaw(uniqueRows);
+          setProducts(uniqueRows);
+          setRefreshVisible(!userDismissed);
+        }
       }
     } finally {
-      setLoading(false);
-      setRefreshBusy(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+        setRefreshBusy(false);
+      }
     }
-  }, [setProducts, setRaw, setFilters, setCurrentFilter, userDismissed]);
+  }, [setProducts, setRaw, setFilters, setCurrentFilter]);  // Removed userDismissed from deps
 
   useEffect(() => {
     fetchProducts({ useTTLMs: DEFAULT_CACHE_TTL_MS, force: false });
@@ -994,7 +1046,7 @@ export default function Products() {
       setSelectedCategory((prev) => {
         if (!prev) return prev;
         // If currentFilter.tags includes prev, keep it; otherwise clear
-        const tags = currentFilter.tags || [];
+        const tags = currentFilterRef.current.tags || [];
         if (tags.some((t) => String(t).trim().toLowerCase() === String(prev).trim().toLowerCase())) {
           return prev;
         }
@@ -1238,6 +1290,7 @@ export default function Products() {
 
   /* ---------- Refresh handlers ---------- */
   const handleManualRefresh = async () => {
+    if (!isMountedRef.current) return;
     invalidateCache();
     try {
       sessionStorage.removeItem("cart");
@@ -1255,6 +1308,28 @@ export default function Products() {
     }
   };
 
+  // Filter toggle with focus management
+  const toggleFilter = useCallback(() => {
+    setFilterOpen((prev) => {
+      const newOpen = !prev;
+      if (!newOpen) {
+        // If closing, focus back to trigger button after state update
+        setTimeout(() => {
+          filterBtnRef.current?.focus();
+        }, 0);
+      }
+      return newOpen;
+    });
+  }, []);
+
+  const handleFilterClose = useCallback(() => {
+    setFilterOpen(false);
+    // Focus back to trigger
+    setTimeout(() => {
+      filterBtnRef.current?.focus();
+    }, 0);
+  }, []);
+
   /* ---------- UI: rendering ---------- */
   return (
     <div className="page products-page-wrapper">
@@ -1262,9 +1337,10 @@ export default function Products() {
         <div className="page-head">
           <div className="filterBtn">
             <button
+              ref={filterBtnRef}
               type="button"
               className="btn filter-btn"
-              onClick={() => setFilterOpen((f) => !f)}
+              onClick={toggleFilter}
               aria-expanded={filterOpen}
               title="Toggle filters"
             >
@@ -1350,7 +1426,7 @@ export default function Products() {
         </div>
       </div>
 
-      <FilterPanel open={filterOpen} onClose={() => setFilterOpen(false)} filters={filters} current={currentFilter} setCurrent={setCurrentFilter} onReset={resetFilters} />
+      <FilterPanel open={filterOpen} onClose={handleFilterClose} filters={filters} current={currentFilter} setCurrent={setCurrentFilter} onReset={resetFilters} />
 
       {cart.length > 0 && (
         <CartDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} items={cart} onInc={addToCart} onDec={removeOne} onRemove={removeAll} onCheckout={handleCheckout} />

@@ -208,12 +208,20 @@ export default function PopularCategoryGrid({
       ) : (
         <div className="pcg-grid" ref={containerRef} style={{ ["--pcg-columns"]: columns }}>
           {categories.map((c) => (
-            <button
+            <div
               key={c.category}
-              type="button"
               className="pcg-card-btn"
+              role="button"
+              tabIndex={0}
               onClick={() => handleCardClick(c)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  handleCardClick(c);
+                }
+              }}
               title={`View products in ${c.category}`}
+              aria-label={`View products in ${c.category}`}
             >
               <article className="pcg-card" aria-label={`${c.category} category`}>
                 <div className="pcg-thumb">
@@ -246,7 +254,7 @@ export default function PopularCategoryGrid({
                   <span className="pcg-buy-label"></span>
                 </button>
               </article>
-            </button>
+            </div>
           ))}
         </div>
       )}
