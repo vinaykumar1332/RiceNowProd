@@ -4,16 +4,19 @@ import HeroBanner from "./HeroBanner/HeroBanner";
 import BrandCategoryGrid from "./BrandCategoryGrid/BrandCategoryGrid";
 import PopularCategoryGrid from "./PopularCategoryGrid/PopularCategoryGrid";
 import MetaHeader from "./MetaHeader/MetaHeader";
+// <- new
 
 export default function Home() {
   return (
     <>
-    <MetaHeader />
+      <MetaHeader />
       <section className="hero-section">
         <HeroBanner />
       </section>
-        <BrandCategoryGrid columns={4} maxBrands={12} />
-        <PopularCategoryGrid columns={4} maxBrands={12} />
+
+      <BrandCategoryGrid columns={4} maxBrands={12} />
+      <PopularCategoryGrid columns={4} maxBrands={12} />
+
     </>
   );
 }

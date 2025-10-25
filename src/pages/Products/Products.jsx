@@ -12,6 +12,8 @@ import { MdOutlineShoppingCartCheckout } from "react-icons/md";
 import { cleanTags } from "../../utils/helpers";
 import { IoIosRefresh } from "react-icons/io";
 import Image from "./Images/Image"; // ensure path/casing matches your file
+import ImageCarousel from "./Images/ImageCarousel";
+import { FaRegWindowClose } from "react-icons/fa"; 
 
 const PRODUCTS_API = VITE_PRODUCTS_API;
 
@@ -491,7 +493,7 @@ FilterPanel.propTypes = {
   onReset: PropTypes.func.isRequired,
 };
 
-/* ---------- ProductDetailsOverlay (kept mostly as-is) ---------- */
+/* ---------- ProductDetailsOverlay (UPDATED to use ImageCarousel) ---------- */
 function ProductDetailsOverlay({ product, onClose, onAdd, onRemove, qty }) {
   if (!product) return null;
   const { title, description, images, image, weight, tags, tags_array, brand } = product;
@@ -500,27 +502,26 @@ function ProductDetailsOverlay({ product, onClose, onAdd, onRemove, qty }) {
     const extra = product.image_id ?? product.drive_image_id ?? product.driveId ?? product.id ?? null;
     if (extra) imageListBase.push(extra);
   }
+
   const [index, setIndex] = useState(0);
   useEffect(() => {
     if (index >= imageListBase.length) setIndex(Math.max(0, imageListBase.length - 1));
   }, [imageListBase.length, index]);
+
   useEffect(() => {
     const onKey = (e) => {
       if (!product) return;
-      if (e.key === "ArrowLeft") {
-        setIndex((i) => (i > 0 ? i - 1 : imageListBase.length - 1));
-      } else if (e.key === "ArrowRight") {
-        setIndex((i) => (i < imageListBase.length - 1 ? i + 1 : 0));
-      } else if (e.key === "Escape") {
+      if (e.key === "Escape") {
         onClose && onClose();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [product, imageListBase.length, onClose]);
+  }, [product, onClose]);
+
+  const tagList = cleanTags(tags, tags_array);
 
   if (imageListBase.length === 0) {
-    const tagList = cleanTags(tags, tags_array);
     return (
       <div className="details-overlay open" onClick={onClose}>
         <div className="details-content" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Product details">
@@ -553,51 +554,18 @@ function ProductDetailsOverlay({ product, onClose, onAdd, onRemove, qty }) {
     );
   }
 
-  const goPrev = (e) => { e?.stopPropagation(); setIndex((i) => (i > 0 ? i - 1 : imageListBase.length - 1)); };
-  const goNext = (e) => { e?.stopPropagation(); setIndex((i) => (i < imageListBase.length - 1 ? i + 1 : 0)); };
-  const jumpTo = (i) => (e) => { e?.stopPropagation(); setIndex(i); };
-  const tagList = cleanTags(tags, tags_array);
-
   return (
     <div className="details-overlay open" onClick={onClose}>
       <div className="details-content details-carousel" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Product details">
-        <button type="button" className="drawer-close" onClick={onClose} aria-label="Close details">✕</button>
-        <div className="carousel-wrap">
-          <button className="carousel-nav left" onClick={goPrev} aria-label="Previous image" type="button">‹</button>
-          <div className="carousel-main">
-            <Image
-              imageUrl={isFullUrl(imageListBase[index]) ? imageListBase[index] : null}
-              imageId={isFullUrl(imageListBase[index]) ? null : imageListBase[index]}
-              alt={`${title} (${index + 1}/${imageListBase.length})`}
-              size={1000}
-              className="carousel-image"
-              style={{ width: "100%", height: "100%" }}
-            />
-          </div>
-          <button className="carousel-nav right" onClick={goNext} aria-label="Next image" type="button">›</button>
-        </div>
+        <button type="button" className="drawer-close" onClick={onClose} aria-label="Close details"><FaRegWindowClose /></button>
 
-        <div className="carousel-thumbs" role="tablist" aria-label="Image thumbnails">
-          {imageListBase.map((img, i) => (
-            <button
-              key={`${String(img)}-${i}`}
-              type="button"
-              className={`thumb-btn ${i === index ? "active" : ""}`}
-              onClick={jumpTo(i)}
-              aria-label={`Show image ${i + 1}`}
-              aria-selected={i === index}
-            >
-              <Image
-                imageUrl={isFullUrl(img) ? img : null}
-                imageId={isFullUrl(img) ? null : img}
-                alt={`${title} thumbnail ${i + 1}`}
-                size={160}
-                className="thumb-image"
-                style={{ width: 80, height: 80, borderRadius: 4 }}
-              />
-            </button>
-          ))}
-        </div>
+        {/* NEW: use ImageCarousel component */}
+        <ImageCarousel
+          images={imageListBase}
+          initialIndex={index}
+          title={title}
+          onIndexChange={(i) => setIndex(i)}
+        />
 
         <div className="details-meta-block">
           <h2>{title}</h2>
@@ -988,23 +956,18 @@ export default function Products() {
         setRefreshBusy(false);
       }
     }
-  }, [setProducts, setRaw, setFilters, setCurrentFilter]);  // Removed userDismissed from deps
+  }, [setProducts, setRaw, setFilters, setCurrentFilter]);
 
   useEffect(() => {
     fetchProducts({ useTTLMs: DEFAULT_CACHE_TTL_MS, force: false });
   }, [fetchProducts]);
 
-  /* ---------- URL → filter sync (brand & category) ----------
-     - Reads both ?brand= and ?category= from the URL (location.search)
-     - Applies them to currentFilter.brand and selectedCategory respectively
-     - Does not overwrite user choices unnecessarily; only updates when param differs
-  */
+  /* ---------- URL → filter sync (brand & category) ---------- */
   useEffect(() => {
     const params = new URLSearchParams(location.search || "");
     const brandParam = params.get("brand");
     const categoryParam = params.get("category");
 
-    // Handle brand param (existing behavior kept, now coexists with category)
     if (brandParam) {
       const brandValue = decodeURIComponent(brandParam).trim();
       setCurrentFilter((c) => {
@@ -1012,40 +975,30 @@ export default function Products() {
         return { ...c, brand: brandValue };
       });
     } else {
-      // If URL has no brand, only reset if current filter was set from URL previously.
       setCurrentFilter((c) => (c.brand ? { ...c, brand: null } : c));
     }
 
-    // Handle category param:
     if (categoryParam) {
       const catValue = decodeURIComponent(categoryParam).trim();
-      // setSelectedCategory so the filtering effect uses it (selectedCategory is used in filtering)
       setSelectedCategory((prev) => {
         if (String(prev) === String(catValue)) return prev;
         return catValue;
       });
 
-      // Optionally, also place the category into currentFilter.tags if tags were empty,
-      // so UI filter chips reflect the URL-driven category (without overwriting user-set tags).
       setCurrentFilter((c) => {
         const existingTags = Array.isArray(c.tags) ? c.tags : [];
         const normalized = String(catValue);
         if (existingTags.length === 0) {
           return { ...c, tags: [normalized] };
         }
-        // if tags already include the category, leave as-is
         if (existingTags.some((t) => String(t).trim().toLowerCase() === normalized.toLowerCase())) {
           return c;
         }
-        // otherwise don't force-add (avoid surprising user's explicit tag selection)
         return c;
       });
     } else {
-      // If URL has no category, do not force-clear user selection unless it was set previously by URL.
-      // We'll reset selectedCategory only if it matches nothing in filters.tags or is empty:
       setSelectedCategory((prev) => {
         if (!prev) return prev;
-        // If currentFilter.tags includes prev, keep it; otherwise clear
         const tags = currentFilterRef.current.tags || [];
         if (tags.some((t) => String(t).trim().toLowerCase() === String(prev).trim().toLowerCase())) {
           return prev;
@@ -1218,7 +1171,6 @@ export default function Products() {
       priceRanges: [],
       tags: [],
     });
-    // also remove brand and category params from URL if present
     const params = new URLSearchParams(location.search || "");
     let changed = false;
     if (params.has("brand")) {

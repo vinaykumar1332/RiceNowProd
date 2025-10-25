@@ -116,6 +116,9 @@ label {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  position: fixed;
+  left:1px;
+  font-size: 30px;
 }
 
 /* hover/active for close */
