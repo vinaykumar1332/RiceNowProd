@@ -3,14 +3,13 @@ import PropTypes from "prop-types";
 import { VITE_PRODUCTS_API } from "../../../API";
 import { saveProductsToSession, loadProductsFromSession } from "../../../utils/storage";
 import Image from "../../../pages/Products/Images/Image";
-import { FaShoppingCart } from "react-icons/fa";
 import "./PopularCategoryGrid.css";
 
+/* small helpers */
 function safeToString(v) {
   if (v === null || v === undefined) return "";
   return String(v);
 }
-
 function shuffleArray(arr) {
   const a = arr.slice();
   for (let i = a.length - 1; i > 0; i--) {
@@ -23,7 +22,6 @@ function shuffleArray(arr) {
 export default function PopularCategoryGrid({
   fetchUrl = VITE_PRODUCTS_API,
   onCategoryClick = null,
-  onBuyNow = null,
   columns = 4,
   maxCategories = 8,
 }) {
@@ -85,8 +83,8 @@ export default function PopularCategoryGrid({
           for (const c of imgCandidates) {
             if (!c) continue;
             const val = String(c).trim();
-            if (val.startsWith("http")) { imageUrl = val; break; }
-            imageId = val;
+            if (/^https?:\/\//i.test(val)) { imageUrl = val; break; }
+            if (!imageId) imageId = val;
           }
           if (imageUrl) break;
         }
@@ -108,6 +106,7 @@ export default function PopularCategoryGrid({
       setLoading(true);
       setError(null);
       try {
+        // serve cached quickly (if present)
         const cached = loadProductsFromSession?.() || [];
         if (cached.length) {
           const grouped = groupByCategory(cached);
@@ -116,6 +115,7 @@ export default function PopularCategoryGrid({
           if (!cancelled) { setCategories(list); setLoading(false); }
         }
 
+        // fetch fresh
         const resp = await fetch(fetchUrl, { cache: "no-store" });
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const data = await resp.json();
@@ -129,7 +129,11 @@ export default function PopularCategoryGrid({
         const grouped = groupByCategory(products);
         let list = objectToCategoryArray(grouped).slice(0, maxCategories);
         list = shuffleArray(list);
-        if (!cancelled) { setCategories(list); setLoading(false); }
+
+        if (!cancelled) {
+          setCategories(list);
+          setLoading(false);
+        }
       } catch (err) {
         if (!cancelled) {
           setError(err.message || "Failed to load products");
@@ -159,7 +163,7 @@ export default function PopularCategoryGrid({
           }
         });
       },
-      { root: null, rootMargin: "0px 0px -10% 0px", threshold: 0.1 }
+      { root: null, rootMargin: "0px 0px -10% 0px", threshold: 0.10 }
     );
 
     cards.forEach((c) => observer.observe(c));
@@ -169,23 +173,11 @@ export default function PopularCategoryGrid({
   const skeletonCount = Math.max(4, columns);
 
   function handleCardClick(c) {
-    if (onCategoryClick) return onCategoryClick(c.category, c.products);
-    window.location.href = `/products?category=${encodeURIComponent(c.category)}`;
-  }
-
-  function handleBuyNow(e, c) {
-    // prevent card click
-    e.stopPropagation();
-    e.preventDefault();
-    const firstProduct = Array.isArray(c.products) && c.products.length ? c.products[0] : null;
-    if (typeof onBuyNow === "function") {
-      onBuyNow(c.category, firstProduct);
-      return;
+    if (typeof onCategoryClick === "function") {
+      return onCategoryClick(c.category, c.products);
     }
-    // fallback behavior: navigate to products page with buy hint
-    const buyId = firstProduct?.id ?? firstProduct?.sku ?? encodeURIComponent(firstProduct?.title ?? "");
-    const url = buyId ? `/products?category=${encodeURIComponent(c.category)}&buy=${encodeURIComponent(buyId)}` : `/products?category=${encodeURIComponent(c.category)}`;
-    window.location.href = url;
+    // default navigation fallback
+    window.location.href = `/products?category=${encodeURIComponent(c.category)}`;
   }
 
   return (
@@ -224,7 +216,7 @@ export default function PopularCategoryGrid({
               aria-label={`View products in ${c.category}`}
             >
               <article className="pcg-card" aria-label={`${c.category} category`}>
-                <div className="pcg-thumb">
+                <div className="pcg-thumb" aria-hidden="false">
                   {c.imageUrl ? (
                     <Image imageUrl={c.imageUrl} alt={`${c.category} image`} size={600} />
                   ) : c.imageId ? (
@@ -238,21 +230,9 @@ export default function PopularCategoryGrid({
                 </div>
 
                 <div className="pcg-body">
-                  <h3 className="pcg-name">{c.category}</h3>
+                  <h3 className="pcg-name" title={c.category}>{c.category}</h3>
                   <p className="pcg-desc">{c.count} products</p>
                 </div>
-
-                {/* Buy Now button - stops propagation so main card click is not triggered */}
-                <button
-                  type="button"
-                  className="pcg-buy-btn"
-                  onClick={(e) => handleBuyNow(e, c)}
-                  aria-label={`Buy now from ${c.category}`}
-                  title={`Buy now from ${c.category}`}
-                >
-                  <FaShoppingCart className="pcg-buy-icon" aria-hidden="true" />
-                  <span className="pcg-buy-label"></span>
-                </button>
               </article>
             </div>
           ))}
@@ -265,7 +245,6 @@ export default function PopularCategoryGrid({
 PopularCategoryGrid.propTypes = {
   fetchUrl: PropTypes.string,
   onCategoryClick: PropTypes.func,
-  onBuyNow: PropTypes.func,
   columns: PropTypes.number,
   maxCategories: PropTypes.number,
 };

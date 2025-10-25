@@ -1,12 +1,12 @@
-/* PopularCategoryGrid.css - unique isolated styles (prefix: pcg-) */
+/* PopularCategoryGrid.css - updated for clearer images, removed buy button */
 
 /* --- variables --- */
 :root {
   --pcg-gap: 16px;
   --pcg-radius: 12px;
-  --pcg-accent: #0a7;
+  --pcg-accent: #07a08a;
   --pcg-accent-dark: #0b7280;
-  --pcg-shadow: 0 10px 30px rgba(2, 6, 23, 0.08);
+  --pcg-shadow: 0 10px 30px rgba(2, 6, 23, 0.06);
   --pcg-text: #0f172a;
   --pcg-muted: #6b7280;
   --pcg-buy-size: 42px;
@@ -25,12 +25,14 @@
 .pcg-header {
   margin-bottom: 0.75rem;
 }
+
 .pcg-header h2 {
   margin: 0;
   font-size: 1.5rem;
   color: var(--pcg-text);
   font-weight: 700;
 }
+
 .pcg-sub {
   margin: 0;
   color: var(--pcg-muted);
@@ -44,14 +46,23 @@
   grid-template-columns: repeat(2, 1fr);
   align-items: stretch;
 }
+
 @media (min-width: 520px) {
-  .pcg-grid { grid-template-columns: repeat(2, 1fr); }
+  .pcg-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
+
 @media (min-width: 820px) {
-  .pcg-grid { grid-template-columns: repeat(3, 1fr); }
+  .pcg-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
+
 @media (min-width: 1100px) {
-  .pcg-grid { grid-template-columns: repeat(4, 1fr); }
+  .pcg-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
 }
 
 /* card wrapper button */
@@ -71,14 +82,16 @@
   flex-direction: column;
   background: #fff;
   border-radius: var(--pcg-radius);
-  overflow: hidden;
+  overflow: visible; /* allow soft shadow/scale */
   box-shadow: var(--pcg-shadow);
-  height: 200px;
+  height: 260px; /* increased to make images clearer */
   opacity: 0;
   transform: translateY(12px) scale(0.98);
-  transition: transform 0.28s cubic-bezier(.2,.9,.2,1), opacity 0.28s ease, box-shadow 220ms ease;
-  position: relative; /* for absolute buy button */
+  transition: transform 0.28s cubic-bezier(.2, .9, .2, 1), opacity 0.28s ease, box-shadow 220ms ease;
+  position: relative;
 }
+
+/* visible when intersection observer triggers */
 .pcg-card.in-view {
   opacity: 1;
   transform: translateY(0) scale(1);
@@ -87,33 +100,51 @@
 /* hover / focus lift */
 .pcg-card-btn:hover .pcg-card,
 .pcg-card-btn:focus .pcg-card {
-  transform: translateY(-6px) scale(1.02);
-  box-shadow: 0 18px 48px rgba(2, 6, 23, 0.12);
-}
-.pcg-card-btn:focus {
-  outline: none;
-}
-.pcg-card-btn:focus-visible .pcg-card,
-.pcg-card-btn:focus .pcg-card {
-  box-shadow: 0 20px 48px rgba(2, 6, 23, 0.14);
-  transform: translateY(-6px) scale(1.02);
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 22px 54px rgba(12, 20, 30, 0.12);
 }
 
-/* thumb */
+/* keyboard focus */
+.pcg-card-btn:focus-visible .pcg-card {
+  box-shadow: 0 28px 64px rgba(12, 20, 30, 0.14);
+  transform: translateY(-8px) scale(1.02);
+}
+
+/* thumb - now centered and padded so images are not cropped */
 .pcg-thumb {
   position: relative;
   width: 100%;
-  aspect-ratio: 4 / 3;
-  background: linear-gradient(180deg, #f7f7f7, #efefef);
+  height: 160px;
+  background: var(--bg-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  border-top-left-radius: var(--pcg-radius);
+  border-top-right-radius: var(--pcg-radius);
   overflow: hidden;
 }
+
+/* make images fully visible and centered */
 .pcg-thumb img,
-.pcg-thumb .lazy-image-wrapper img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.pcg-thumb .lazy-image-wrapper img,
+.pcg-thumb .ic-image,
+.pcg-thumb .thumb-image {
+  max-width: 100%;
+  max-height: 92%;
+  object-fit: contain; /* do not crop — contain within box */
   display: block;
+  margin: 0 auto;
+  transition: transform 280ms cubic-bezier(.2,.9,.2,1), filter 240ms ease;
+  will-change: transform;
 }
+
+/* subtle pop when hovering card */
+.pcg-card-btn:hover .pcg-thumb img {
+  transform: scale(1.03);
+}
+
+/* placeholder fallback */
 .pcg-thumb-placeholder {
   display: flex;
   align-items: center;
@@ -121,34 +152,44 @@
   font-size: 36px;
   color: #fff;
   height: 100%;
+  width: 100%;
   background: linear-gradient(135deg, var(--pcg-accent), var(--pcg-accent-dark));
 }
+
+/* count badge */
 .pcg-badge {
   position: absolute;
-  top: 10px;
-  right: 10px;
-  background: rgba(0,0,0,0.6);
+  top: 12px;
+  right: 12px;
+  background: rgba(0, 0, 0, 0.6);
   color: #fff;
   font-weight: 700;
   font-size: 0.85rem;
   padding: 6px 10px;
   border-radius: 999px;
   box-shadow: 0 6px 18px rgba(11, 17, 23, 0.12);
+  z-index: 6;
 }
 
 /* body */
 .pcg-body {
-  padding: 0.9rem 1rem 1.25rem;
+  padding: 0.85rem 1rem 1.25rem;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
 }
+
 .pcg-name {
   margin: 0;
   font-size: 1rem;
   font-weight: 700;
   color: var(--pcg-text);
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
+
 .pcg-desc {
   margin: 0.35rem 0 0;
   color: var(--pcg-muted);
@@ -159,148 +200,34 @@
 .pcg-skeleton {
   border-radius: var(--pcg-radius);
   height: 280px;
-  background: linear-gradient(90deg, rgba(0,0,0,0.04) 0%, rgba(0,0,0,0.08) 50%, rgba(0,0,0,0.04) 100%);
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.04) 0%, rgba(0, 0, 0, 0.08) 50%, rgba(0, 0, 0, 0.04) 100%);
   background-size: 240% 100%;
   animation: pcg-shimmer 1.4s linear infinite;
 }
+
 @keyframes pcg-shimmer {
   0% { background-position: -200px 0; }
   100% { background-position: calc(200px + 100%) 0; }
 }
 
 /* error & empty */
-.pcg-error, .pcg-empty {
+.pcg-error,
+.pcg-empty {
   padding: 1.2rem;
   border-radius: 10px;
-  background: rgba(2,6,23,0.03);
+  background: rgba(2, 6, 23, 0.03);
   color: var(--pcg-muted);
   text-align: center;
 }
 
-/* ========== BUY NOW button ========== */
+/* remove buy now styles — we removed the button from markup */
+/* if any residual .pcg-buy-btn rules remain in your project, they won't be used */
 
-/* base button (positioned on card) */
-.pcg-buy-btn {
-  position: absolute;
-  right: 12px;
-  bottom: 12px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: var(--pcg-buy-size);
-  padding:0px;
-  border-radius: 999px;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  font-weight: 700;
-
-  font-size: var(--pcg-buy-font);
-  transform-origin: center;
-  transition:
-    transform 200ms cubic-bezier(0.4, 0, 0.2, 1),
-    box-shadow 200ms cubic-bezier(0.4, 0, 0.2, 1),
-    opacity 200ms ease,
-    background 220ms ease;
-  z-index: 6;
-  -webkit-tap-highlight-color: transparent;
-}
-
-/* icon inside the button */
-.pcg-buy-icon {
-  width: 18px;
-  height: 18px;
-  display: inline-block;
-  transform-origin: center;
-  color: var(--pcg-accent);
-  transition: 
-    transform 240ms cubic-bezier(0.4, 0, 0.2, 1),
-    opacity 180ms ease;
-}
-
-/* label */
-.pcg-buy-label {
-  display: inline-block;
-  line-height: 1;
-  transform-origin: left center;
-}
-
-/* hover / focus for buy */
-.pcg-buy-btn:hover {
-  transform: translateY(-2px) scale(1.05);
-  box-shadow: 0 12px 32px rgba(11, 17, 23, 0.16);
-  background: linear-gradient(90deg, #0d9a99, #0a6b77);
-}
-.pcg-buy-btn:hover .pcg-buy-icon {
-  transform: scale(1.1) rotate(5deg);
-}
-.pcg-buy-btn:active {
-  transform: translateY(-1px) scale(0.98);
-  transition-duration: 100ms;
-}
-.pcg-buy-btn:active .pcg-buy-icon {
-  transform: translateX(2px) rotate(360deg) scale(1.05);
-}
-.pcg-buy-btn:focus {
-  outline: 3px solid rgba(14,165,164,0.2);
-  outline-offset: 3px;
-}
-
-/* small-screen: icon-only */
-@media (max-width: 420px) {
-  .pcg-buy-btn { height: 36px; padding: 6px 8px; gap: 6px; }
-  .pcg-buy-label { display: none; } /* conserve space on narrow screens */
-}
-
-/* enhanced click feedback pop: add class .pcg-buy-pop to trigger; JS can add/remove */
-@keyframes pcg-pop {
-  0% { 
-    transform: scale(1) translateY(0);
-    box-shadow: 0 8px 22px rgba(11, 17, 23, 0.12);
-  }
-  40% { 
-    transform: scale(1.12) translateY(-3px);
-    box-shadow: 0 20px 40px rgba(11, 17, 23, 0.18);
-  }
-  100% { 
-    transform: scale(1) translateY(0);
-    box-shadow: 0 8px 22px rgba(11, 17, 23, 0.12);
-  }
-}
-.pcg-buy-btn.pcg-buy-pop {
-  animation: pcg-pop 300ms cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* enhanced icon micro-gesture when clicking */
-.pcg-buy-btn:active .pcg-buy-icon,
-.pcg-buy-btn.pcg-buy-pop .pcg-buy-icon {
-  animation: pcg-icon-bounce 300ms cubic-bezier(0.4, 0, 0.2, 1);
-}
-@keyframes pcg-icon-bounce {
-  0% { 
-    transform: translateX(0) rotate(0deg) scale(1);
-  }
-  50% { 
-    transform: translateX(4px) rotate(180deg) scale(1.1);
-  }
-  100% { 
-    transform: translateX(0) rotate(360deg) scale(1);
-  }
-}
-
-/* Disabled state (if you programmatically disable) */
-.pcg-buy-btn[disabled],
-.pcg-buy-btn.disabled {
-  opacity: 0.6;
-  pointer-events: none;
-  transform: none;
-  background: linear-gradient(90deg, rgba(14,165,164,0.6), rgba(11,114,128,0.6));
-}
-
-/* Accessible focus ring for whole card when keyboard navigating */
-.pcg-card-btn:focus-visible .pcg-card {
-  box-shadow: 0 24px 48px rgba(2,6,23,0.16);
-  transform: translateY(-6px) scale(1.02);
+/* Accessible focus ring for keyboard nav */
+.pcg-card-btn:focus-visible {
+  outline: 3px solid rgba(0, 150, 140, 0.12);
+  outline-offset: 4px;
+  border-radius: 10px;
 }
 
 /* staggered reveal delays for nicer entrance when many cards */
@@ -311,11 +238,9 @@
 .pcg-grid .pcg-card.in-view:nth-child(4) { transition-delay: 160ms; }
 .pcg-grid .pcg-card.in-view:nth-child(5) { transition-delay: 200ms; }
 
-/* Respect user's reduced motion preference */
+/* reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .pcg-card,
-  .pcg-buy-btn,
-  .pcg-buy-icon,
   .pcg-thumb img {
     transition: none !important;
     animation: none !important;
