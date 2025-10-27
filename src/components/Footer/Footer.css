@@ -471,7 +471,7 @@
   .built-by-avatar { width: 30px; height: 30px; font-size: 14px; }
 }
 .col.newsletter-col{
-    display: none;
+    display: block;
 }
 
 /* Animations Keyframes */

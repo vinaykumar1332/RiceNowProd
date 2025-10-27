@@ -6,7 +6,6 @@
   --bg-text: #0f172a;
   --carousel-transition: 420ms;
   --thumb-aspect: 4 / 3;
-  /* change to 16/9 or 1/1 if you prefer */
   --visible-count: 4;
 }
 
@@ -20,7 +19,7 @@
 
 /* header */
 .bg-header {
-  margin-bottom: .75rem;
+  margin-bottom: 0.75rem;
 }
 
 .bg-header h2 {
@@ -33,7 +32,7 @@
 .bg-sub {
   margin: 0;
   color: #6b7280;
-  font-size: .95rem;
+  font-size: 0.95rem;
 }
 
 /* carousel outer */
@@ -49,13 +48,16 @@
   grid-auto-flow: column;
   grid-auto-columns: calc((100% - (var(--visible-count) - 1) * var(--bg-gap)) / var(--visible-count));
   align-items: stretch;
-  /* stretch columns to equal height */
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
   padding-bottom: 8px;
   scrollbar-width: thin;
   scroll-behavior: smooth;
+  overscroll-behavior-x: contain;
+  -ms-scroll-snap-type: x mandatory;
+  touch-action: pan-x;
+  -webkit-scroll-snap-type: x mandatory; /* Additional mobile support */
 }
 
 /* scrollbar look */
@@ -73,8 +75,8 @@
   width: 100%;
   display: flex;
   align-items: stretch;
-  /* stretch child (.bg-card) to full height */
   scroll-snap-align: start;
+  min-width: 0;
 }
 
 /* reset the button */
@@ -86,6 +88,7 @@
   text-align: left;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  width: 100%;
 }
 
 /* CARD - entrance animation initial state + normal layout */
@@ -94,27 +97,33 @@
   overflow: hidden;
   background: #fff;
   box-shadow: var(--bg-shadow);
-  transition: transform var(--carousel-transition) cubic-bezier(.2, .9, .2, 1), box-shadow .14s ease, opacity .42s ease;
+  transition: transform var(--carousel-transition) cubic-bezier(0.2, 0.9, 0.2, 1), box-shadow 0.14s ease, opacity 0.42s ease;
   display: flex;
   flex-direction: column;
   height: 100%;
   min-height: 250px;
-  width: 220px;
-  /* entrance animation start: invisible and moved down a touch */
+  width: 100%;
   opacity: 0;
   transform: translateY(10px) scale(0.995);
   will-change: transform, opacity;
+}
 
-  @media (max-width:576px) {
-    width: 190px;
+/* Remove fixed widths to rely on grid-auto-columns */
+@media (max-width: 576px) {
+  .bg-card {
+    min-width: 160px; /* Minimum width to prevent cards from becoming too narrow */
   }
+}
 
-  @media (max-width:378px) {
-    width: 160px;
+@media (max-width: 378px) {
+  .bg-card {
+    min-width: 140px; /* Slightly smaller for very small screens */
   }
+}
 
-  @media (min-width:1001px) {
-     width: 260px;
+@media (min-width: 1001px) {
+  .bg-card {
+    min-width: 200px; /* Minimum width for larger screens */
   }
 }
 
@@ -132,12 +141,15 @@
   background: linear-gradient(180deg, #f7f7f7, #efefef);
   overflow: hidden;
   flex: 0 0 auto;
-  @media (max-width:576px) {
-     height: 201px;
+}
+
+@media (max-width: 576px) {
+  .bg-thumb-wrap {
+    height: 201px;
   }
 }
 
-/* Ensure images fill thumb box (object-fit: cover gives consistent visual) */
+/* Ensure images fill thumb box */
 .bg-thumb-img,
 .bg-thumb-img .internal-img,
 .bg-thumb-img img {
@@ -170,21 +182,21 @@
   padding: 6px 10px;
   border-radius: 999px;
   font-weight: 700;
-  font-size: .85rem;
+  font-size: 0.85rem;
   box-shadow: 0 8px 28px rgba(2, 6, 23, 0.12);
   z-index: 2;
 }
 
 /* BODY - consistent padding and predictable height */
 .bg-body {
-  padding: .9rem 1rem 1rem;
+  padding: 0.9rem 1rem 1rem;
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
 }
 
-/* normalize text margins (avoid extra vertical gaps) */
+/* normalize text margins */
 .bg-name {
   margin: 0;
   font-weight: 700;
@@ -194,13 +206,13 @@
 }
 
 .bg-desc {
-  margin: .35rem 0 0;
+  margin: 0.35rem 0 0;
   color: #6b7280;
-  font-size: .95rem;
+  font-size: 0.95rem;
   line-height: 1.2;
 }
 
-/* hover / focus visuals - keep hover lift subtle to not conflict with animation */
+/* hover / focus visuals */
 .bg-card-btn:focus .bg-card,
 .bg-card-btn:hover .bg-card {
   transform: translateY(-6px) scale(1.002);
@@ -216,7 +228,7 @@
   transform: translateY(-8px) scale(1.002);
 }
 
-/* SKELETON (match shapes exactly) */
+/* SKELETON */
 .bg-skeleton-card {
   border-radius: var(--bg-radius);
   overflow: hidden;
@@ -260,7 +272,6 @@
   0% {
     background-position: -200px 0;
   }
-
   100% {
     background-position: calc(200px + 100%) 0;
   }
@@ -307,7 +318,7 @@
   line-height: 1;
 }
 
-/* responsive visible-count adjustments (mobile shows 2 cards now) */
+/* responsive visible-count adjustments */
 @media (max-width: 1100px) {
   :root {
     --visible-count: 3;
@@ -320,10 +331,9 @@
   }
 }
 
-/* show 2 cards on very small devices (<=420px) */
 @media (max-width: 420px) {
   :root {
-    --visible-count: 2;
+    --visible-count: 1.5; /* Show partial next card for better UX */
   }
 }
 
@@ -336,9 +346,7 @@
   color: #6b7280;
 }
 
-/*Popular CategoryGrid*/
-.brand-grid-wrapper.popular-product{
-.bg-card {
-    opacity: 1 !important;
-}
+/* Popular CategoryGrid */
+.brand-grid-wrapper.popular-product .bg-card {
+  opacity: 1 !important;
 }
