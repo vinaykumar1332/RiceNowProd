@@ -138,7 +138,6 @@ export default function Image({
       {/* ratio box to reserve space and avoid layout shift */}
       <div
         className="img-ratio"
-        style={aspectPadding ? { paddingBottom: aspectPadding } : undefined}
         aria-hidden="true"
       />
 

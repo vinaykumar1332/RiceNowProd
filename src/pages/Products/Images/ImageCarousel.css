@@ -109,9 +109,9 @@
         margin-top: 10px;
 
         .ic-bullet {
-            width: 10px;
-            height: 10px;
-            border-radius: 999px;
+            width: 6px;
+            height: 12px;
+            border-radius: 50%;
             border: none;
             background: #e6e9ef;
             cursor: pointer;
@@ -119,7 +119,7 @@
 
             &.active {
                 background: var(--primary-color);
-                transform: scale(1.28);
+                transform: scale(1.15);
                 box-shadow: 0 6px 14px rgba(23, 92, 211, 0.16);
             }
         }
