@@ -139,7 +139,7 @@
 .cart-row-right {
   display: flex;
   align-items: center;
-  gap: 22px;
+  gap: 18px;
 }
 
 .qty-controls {
@@ -472,7 +472,7 @@
   align-items: center;
   gap: 12px;
   padding: 8px 12px;
-  --step-size: 44px;
+  --step-size: 34px;
 }
 
 /* step circle */
@@ -510,7 +510,7 @@
 /* connector (the line between steps) */
 .checkout-stepper .connector {
   height: 4px;
-  width: 48px;
+  width: 28px;
   border-radius: 999px;
   background: #eee;
   transition: background 180ms ease, box-shadow 180ms ease, transform 180ms ease;
@@ -537,7 +537,7 @@
 /* Make labels line up under steps — use small responsive tweak */
 @media (max-width: 700px) {
   .checkout-stepper {
-    gap: 8px;
+    gap: 2px;
   }
 
   .checkout-stepper .step-labels {
@@ -563,4 +563,8 @@
   strong{
     font-size: 1.2rem;
   }
+}
+
+.line-saved{
+  display: none;
 }
