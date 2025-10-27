@@ -1,5 +1,5 @@
 .checkout-page {
-  padding: 24px;
+  padding: 1rem;
   min-height: 100vh;
   background: #fbfbfb;
   font-family: var(--font-family, Inter, system-ui, Arial);
@@ -102,20 +102,21 @@
 }
 
 .cart-thumb-img-wrapper {
-  width: 75px;
+  width: 98px;
   height: 100px;
   background-size: cover;
   background-position: center;
   border-radius: 6px;
   background: #f2f2f2;
   flex-shrink: 0;
+
   .cart-thumb {
     width: 100%;
     height: 100%;
     background-size: cover;
     background-position: center;
     border-radius: 6px;
-}
+  }
 }
 
 .cart-title {
@@ -148,11 +149,12 @@
 }
 
 .qty-btn {
-  padding: 6px 10px;
+  padding: 6px 8px;
   background: #fff;
   border: 1px solid rgba(0, 0, 0, 0.06);
   border-radius: 6px;
   cursor: pointer;
+  border-color: var(--primary-color);
 }
 
 .qty-display {
@@ -181,6 +183,11 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+
+  strong{
+    color: var(--primary-color);
+    font-size: 1rem;
+  }
 }
 
 .summary-row {
@@ -195,8 +202,8 @@
   gap: 12px;
   justify-content: flex-end;
 
-  .btn{
-    svg{
+  .btn {
+    svg {
       vertical-align: middle;
     }
   }
@@ -229,16 +236,19 @@
   gap: 12px;
   max-width: 680px;
 
-  .terms-row{
-    display:flex ;
+  .terms-row {
+    display: flex;
     flex-direction: row;
   }
-  input[type="radio"]:focus, input[type="checkbox"]:focus {
-   border: 1px solid #0a7;
-}
-.view-map{
-  display: none;
-}
+
+  input[type="radio"]:focus,
+  input[type="checkbox"]:focus {
+    border: 1px solid #0a7;
+  }
+
+  .view-map {
+    display: none;
+  }
 }
 
 
@@ -404,22 +414,23 @@
   }
 }
 
-#review-heading{
+#review-heading {
   margin: 0;
 }
 
-.form-actions.panel-2-actions{
+.form-actions.panel-2-actions {
   display: flex;
   gap: 12px;
   justify-content: space-between;
 
-  .btn{
-    svg{
+  .btn {
+    svg {
       vertical-align: middle;
     }
   }
 }
-.confirm-line{
+
+.confirm-line {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -427,7 +438,8 @@
   padding: 8px 0;
   border-bottom: 1px dashed rgba(0, 0, 0, 0.04);
 }
-.confirm-customer{
+
+.confirm-customer {
   margin-top: 12px;
   border-top: 1px dashed rgba(0, 0, 0, 0.06);
   padding-top: 12px;
@@ -435,10 +447,120 @@
   flex-direction: column;
   gap: 12px;
   max-width: 680px;
-  .customer-info-row{
+
+  .customer-info-row {
     display: flex;
     justify-content: space-between;
     gap: 12px;
   }
 }
 
+.cart-pricing-row {
+  padding: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+
+  .orig-price {
+    display: none;
+  }
+}
+
+/* STEP / CONNECTOR STYLES */
+.checkout-stepper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  --step-size: 44px;
+}
+
+/* step circle */
+.checkout-stepper .step {
+  width: var(--step-size);
+  height: var(--step-size);
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #eee;
+  color: #666;
+  font-weight: 700;
+  box-shadow: none;
+  transition: all 180ms ease;
+  flex-shrink: 0;
+}
+
+/* active step */
+.checkout-stepper .step.active {
+  background: linear-gradient(135deg, #07a36a, #009977);
+  color: #fff;
+  box-shadow: 0 6px 14px rgba(0, 128, 102, 0.12);
+  transform: translateY(-2px);
+}
+
+/* completed step (visited but not current) */
+.checkout-stepper .step.completed {
+  background: #0a7;
+  color: #fff;
+  box-shadow: 0 6px 14px rgba(0, 128, 102, 0.08);
+  opacity: 0.95;
+}
+
+/* connector (the line between steps) */
+.checkout-stepper .connector {
+  height: 4px;
+  width: 48px;
+  border-radius: 999px;
+  background: #eee;
+  transition: background 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+  flex-shrink: 0;
+}
+
+/* active (filled) connector */
+.checkout-stepper .connector.active {
+  background: linear-gradient(90deg, #07a36a, #009977);
+  box-shadow: 0 6px 14px rgba(0, 128, 102, 0.08);
+  transform: translateY(-1px);
+}
+
+/* labels below the stepper */
+.checkout-stepper .step-labels {
+  display: flex;
+  gap: 14px;
+  margin-left: 10px;
+  font-size: 0.9rem;
+  color: #666;
+  align-items: center;
+}
+
+/* Make labels line up under steps — use small responsive tweak */
+@media (max-width: 700px) {
+  .checkout-stepper {
+    gap: 8px;
+  }
+
+  .checkout-stepper .step-labels {
+    display: none;
+  }
+}
+
+/* small variant: reduce connector width when space is tight */
+@media (max-width: 420px) {
+  .checkout-stepper .connector {
+    width: 28px;
+    height: 3px;
+  }
+
+  .checkout-stepper .step {
+    width: 36px;
+    height: 36px;
+    font-size: 0.95rem;
+  }
+}
+
+.summary-row.discount{
+  strong{
+    font-size: 1.2rem;
+  }
+}
