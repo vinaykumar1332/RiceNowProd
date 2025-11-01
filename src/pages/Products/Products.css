@@ -842,13 +842,13 @@ label>input[type="checkbox"] {
 
   .btn.primary {
     padding: 12px 17px;
-    font-size: 1.17rem;
+    font-size: 1rem;
     border-radius: 6px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     transition: transform 0.2s, box-shadow 0.2s;
 
     svg {
-      font-size: 1.14rem;
+      font-size: 1rem;
       position: relative;
       top: 3px;
 

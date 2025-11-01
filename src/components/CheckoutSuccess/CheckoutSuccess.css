@@ -182,8 +182,8 @@
     padding: 1rem;
   }
   .cn-success-root .image-wrapper {
-    width: 180px;
-    height: 120px;
+    width: 230px;
+    height: 180px;
   }
   .cn-success-root .btn { min-width: 120px; }
   .cn-success-root .badge { right: 20px; transform: translateX(0); top: -6px; }

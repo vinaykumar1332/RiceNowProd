@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { CommonIcons } from "../../../App.config";
+import { FaWindowClose } from "react-icons/fa";
 import "./CheckoutSuccess.css";
 
 export default function CheckoutSuccess() {
@@ -85,16 +86,7 @@ export default function CheckoutSuccess() {
           aria-label="Close and continue shopping"
           title="Close"
         >
-          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden>
-            <path
-              d="M6 6 L18 18 M18 6 L6 18"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              fill="none"
-            />
-          </svg>
+     <FaWindowClose />
         </button>
 
         <div className="success-inner">

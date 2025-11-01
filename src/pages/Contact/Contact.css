@@ -1,6 +1,6 @@
 /* Scoped styles for Contact page to avoid leaking */
 .contact-root {
-    --accent-color: #0b76ef;
+    --accent-color:var(--primary-color);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -9,14 +9,13 @@
     /* account for header/footer */
     background: linear-gradient(180deg, #fff 0%, #fbfdff 100%);
     color: #111;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-}
+
+
 
 .contact-inner {
     max-width: 980px;
     width: 100%;
     display: grid;
-    grid-template-columns: 1fr 1fr;
     gap: 28px;
     align-items: center;
     padding: 28px;
@@ -112,7 +111,7 @@
     color: #6b7280;
     font-size: 0.95rem;
 }
-
+}
 /* responsive */
 @media (max-width: 880px) {
     .contact-inner {
