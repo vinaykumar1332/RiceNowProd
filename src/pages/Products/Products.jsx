@@ -8,7 +8,7 @@ import { FaFilter } from "react-icons/fa6";
 import { FaShoppingCart, FaTrash } from "react-icons/fa";
 import Search from "./Search/Search";
 import { VITE_PRODUCTS_API } from "../../API";
-import { MdOutlineShoppingCartCheckout } from "react-icons/md";
+import { TiShoppingCart } from "react-icons/ti";
 import { cleanTags } from "../../utils/helpers";
 import { IoIosRefresh } from "react-icons/io";
 import Image from "./Images/Image"; // ensure path/casing matches your file
@@ -313,7 +313,7 @@ function CartDrawer({ open, onClose, items, onInc, onDec, onRemove, onCheckout }
             onClick={() => onCheckout && onCheckout()}
             disabled={items.length === 0}
           >
-            Checkout <MdOutlineShoppingCartCheckout />
+            Checkout <TiShoppingCart />
           </button>
           <button type="button" className="btn cancel" onClick={onClose} aria-label="Close cart">
             Cancel

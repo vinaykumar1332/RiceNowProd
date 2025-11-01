@@ -1,0 +1,261 @@
+/* Scoped to .cn-success-root so it doesn't impact other components */
+.cn-success-root {
+  /* Accent color variable — override at parent (body or container) if needed */
+  --accent-color:  var(--primary-color);
+  --overlay-bg: rgba(11, 14, 22, 0.55);
+  --modal-bg: #ffffff;
+  --radius: 14px;
+  --text-color: #222;
+  --muted: #666;
+  --max-width: 520px;
+  --gap: 1rem;
+  --transition: 240ms cubic-bezier(.2,.9,.25,1);
+
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Backdrop */
+.cn-success-root .success-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--overlay-bg);
+  filter: saturate(0.98);
+  backdrop-filter: blur(4px) contrast(0.95);
+}
+
+/* Container (modal) */
+.cn-success-root .success-container {
+  --w: min(calc(var(--max-width)), 94%);
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(0.98);
+  width: var(--w);
+  max-width: var(--max-width);
+  background: var(--modal-bg);
+  border-radius: var(--radius);
+  padding: calc(var(--gap) * 1.4);
+  box-shadow: 0 12px 48px rgba(10, 20, 40, 0.35);
+  text-align: center;
+  color: var(--text-color);
+  overflow: visible;
+  outline: none;
+  animation: cn-modal-in 360ms cubic-bezier(.2,.9,.25,1) forwards;
+}
+
+/* Close button top-right */
+.cn-success-root .close-btn {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+  transition: transform var(--transition), background-color var(--transition), color var(--transition);
+}
+.cn-success-root .close-btn:hover {
+  transform: rotate(90deg) scale(1.05);
+  color: var(--accent-color);
+  background: rgba(0,0,0,0.03);
+}
+
+/* Inner layout */
+.cn-success-root .success-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(var(--gap) * 0.8);
+  padding-top: 6px;
+}
+
+/* visuals wrapper for image + badge */
+.cn-success-root .visuals {
+  position: relative;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* image wrapper (scoped) */
+.cn-success-root .image-wrapper {
+  width: 220px;
+  height: 140px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 12px;
+  overflow: visible;
+  margin-bottom: 6px;
+  transform-origin: center;
+  animation: floatIn 520ms cubic-bezier(.2,.9,.25,1) both;
+}
+
+.cn-success-root .delivery-scooter {
+  max-width: 100%;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto;
+  filter: drop-shadow(0 6px 12px rgba(11, 118, 239, 0.12));
+}
+.cn-success-root .success-title {
+  font-size: 1.6rem;
+  margin: 4px 0 6px;
+  color: var(--accent-color);
+  letter-spacing: -0.2px;
+}
+
+.cn-success-root .success-message {
+  color: var(--muted);
+  font-size: 0.98rem;
+  margin: 0;
+  padding: 0 6px;
+  line-height: 1.45;
+}
+
+.cn-success-root .order-id {
+  color: var(--accent-color);
+  font-weight: 600;
+  margin-left: 4px;
+}
+
+/* Actions */
+.cn-success-root .success-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 14px;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Buttons */
+.cn-success-root .btn {
+  min-width: 140px;
+  padding: 0.6rem 1.05rem;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Secondary (white background, accent text) */
+.cn-success-root .btn.btn-secondary {
+  background: #fff;
+  color: var(--accent-color);
+  border-color: rgba(11,118,239,0.12);
+  box-shadow: 0 6px 12px rgba(11,118,239,0.06);
+}
+.cn-success-root .btn.btn-secondary:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 22px rgba(11,118,239,0.10);
+}
+
+/* Primary (accent filled) */
+.cn-success-root .btn.btn-primary {
+  background: linear-gradient(180deg, var(--accent-color), color-mix(in srgb, var(--accent-color) 75%, black 10%));
+  color: #fff;
+  border: 1px solid rgba(0,0,0,0.04);
+  box-shadow: 0 12px 30px rgba(11,118,239,0.14);
+}
+.cn-success-root .btn.btn-primary:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 18px 38px rgba(11,118,239,0.18);
+}
+
+/* Small screen adjustments */
+@media (max-width: 520px) {
+  .cn-success-root .success-container {
+    padding: 1rem;
+  }
+  .cn-success-root .image-wrapper {
+    width: 180px;
+    height: 120px;
+  }
+  .cn-success-root .btn { min-width: 120px; }
+  .cn-success-root .badge { right: 20px; transform: translateX(0); top: -6px; }
+}
+
+/* Animations */
+@keyframes cn-modal-in {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.96); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+@keyframes floatIn {
+  from { transform: translateY(14px) rotate(-3deg) scale(0.98); opacity: 0; }
+  to { transform: translateY(0) rotate(0) scale(1); opacity: 1; }
+}
+@keyframes badgePop {
+  from { transform: translateY(-6px) scale(0.6); opacity: 0; }
+  to   { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+/* Confetti pieces (decorative) */
+.cn-success-root .confetti-pieces {
+  pointer-events: none;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 0;
+  overflow: visible;
+}
+
+/* piece base */
+.cn-success-root .confetti-piece {
+  position: absolute;
+  width: 8px;
+  height: 12px;
+  border-radius: 2px;
+  opacity: 0.95;
+  transform-origin: center;
+  will-change: transform, opacity;
+  animation-timing-function: linear;
+}
+
+/* different colors and positions */
+.cn-success-root .confetti-piece {
+  background: var(--accent-color);
+}
+
+/* Create variety for pieces */
+.cn-success-root .confetti-piece.piece-1  { left: 10%;  top: 18%; animation: confetti-fall 2200ms 120ms linear infinite; background: var(--accent-color); transform: rotate(12deg); }
+.cn-success-root .confetti-piece.piece-2  { left: 25%;  top: 12%; animation: confetti-fall 2100ms 250ms linear infinite; background: #ffbe2e; transform: rotate(-18deg); }
+.cn-success-root .confetti-piece.piece-3  { left: 40%;  top: 8%;  animation: confetti-fall 2400ms 60ms  linear infinite; background: #35c37d; transform: rotate(6deg); }
+.cn-success-root .confetti-piece.piece-4  { left: 55%;  top: 14%; animation: confetti-fall 2000ms 80ms  linear infinite; background: #ff6b6b; transform: rotate(-8deg); }
+.cn-success-root .confetti-piece.piece-5  { left: 70%;  top: 10%; animation: confetti-fall 2300ms 200ms linear infinite; background: #7a5cff; transform: rotate(22deg); }
+.cn-success-root .confetti-piece.piece-6  { left: 85%;  top: 16%; animation: confetti-fall 2100ms 140ms linear infinite; background: #ffbe2e; transform: rotate(-12deg); }
+.cn-success-root .confetti-piece.piece-7  { left: 20%;  top: 2%;  animation: confetti-fall 2600ms 300ms linear infinite; background: #7a5cff; transform: rotate(8deg); }
+.cn-success-root .confetti-piece.piece-8  { left: 34%;  top: 4%;  animation: confetti-fall 2500ms 200ms linear infinite; background: #35c37d; transform: rotate(-20deg); }
+.cn-success-root .confetti-piece.piece-9  { left: 48%;  top: 3%;  animation: confetti-fall 2700ms 80ms linear infinite; background: #ff6b6b; transform: rotate(10deg); }
+.cn-success-root .confetti-piece.piece-10 { left: 62%;  top: 1%;  animation: confetti-fall 2400ms 150ms linear infinite; background: #ffbe2e; transform: rotate(-6deg); }
+.cn-success-root .confetti-piece.piece-11 { left: 76%;  top: 6%;  animation: confetti-fall 2600ms 210ms linear infinite; background: #35c37d; transform: rotate(16deg); }
+.cn-success-root .confetti-piece.piece-12 { left: 90%;  top: 5%;  animation: confetti-fall 2400ms 100ms linear infinite; background: #7a5cff; transform: rotate(-14deg); }
+
+/* confetti falling keyframe (drop + spin + fade) */
+@keyframes confetti-fall {
+  0%   { transform: translateY(0) rotate(0) scale(1); opacity: 1; }
+  60%  { opacity: 1; }
+  100% { transform: translateY(220px) rotate(720deg) scale(0.9); opacity: 0; }
+}
+
+/* small accessible helper (screen reader only) */
+.cn-success-root .sr-only {
+  position: absolute !important;
+  height: 1px; width: 1px;
+  overflow: hidden; clip: rect(1px, 1px, 1px, 1px);
+  white-space: nowrap; border: 0; padding: 0; margin: -1px;
+}

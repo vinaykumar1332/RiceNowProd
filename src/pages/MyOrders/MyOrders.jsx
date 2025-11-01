@@ -110,7 +110,7 @@ export default function MyOrders({ apiUrl }) {
   const resultRef = useRef(null);
 
   useEffect(() => {
-    const saved = localStorage.getItem("savedMobile");
+    const saved = sessionStorage.getItem("savedMobile");
     if (saved) { setMobile(saved); searchOrders(saved); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -128,7 +128,7 @@ export default function MyOrders({ apiUrl }) {
     setOpenOrderId(null);
 
     if (!validateMobile(m)) { setErrorMsg("Please enter a valid 10-digit mobile number."); return; }
-    localStorage.setItem("savedMobile", m);
+    sessionStorage.setItem("savedMobile", m);
     setLoading(true);
 
     if (!VITE_ORDERS_API_var) {
@@ -178,7 +178,7 @@ export default function MyOrders({ apiUrl }) {
   }, [openOrderId, orders]);
 
   const handleToggle = (orderId) => setOpenOrderId(prev => prev === orderId ? null : orderId);
-  const handleClear = () => { setMobile(""); localStorage.removeItem("savedMobile"); setOrders([]); setErrorMsg(""); setStatusCounts({}); setOpenOrderId(null); };
+  const handleClear = () => { setMobile(""); sessionStorage.removeItem("savedMobile"); setOrders([]); setErrorMsg(""); setStatusCounts({}); setOpenOrderId(null); };
 
   const filters = useMemo(() => {
     const base = [{ key: "all", label: `All (${orders.length})` }];
