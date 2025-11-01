@@ -361,11 +361,6 @@
   font-weight: 600;
   transition: all 0.28s var(--animation-ease);
   position: relative;
-  padding: 8px 14px;
-  border-radius: 999px;
-  background: linear-gradient(180deg, rgba(255,255,255,0.6), rgba(255,255,255,0.4));
-  border: 1px solid var(--footer-border);
-  box-shadow: 0 6px 18px rgba(2,6,23,0.04);
   will-change: transform, box-shadow;
   overflow: hidden;
 }
@@ -466,7 +461,7 @@
   .built-by-link {
     font-size: 0.9rem;
     gap: 8px;
-    padding: 6px 10px;
+
   }
   .built-by-avatar { width: 30px; height: 30px; font-size: 14px; }
 }
@@ -535,4 +530,7 @@
   .footer-bottom {
     font-size: 0.9rem;
   }
+}
+.built-by-avatar{
+  display: none;
 }
