@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import PropTypes from "prop-types";
-import Image from "./Image"; // your existing Image wrapper
+import Image from "./Image";
 import "./ImageCarousel.css";
 import { FaRegWindowClose } from "react-icons/fa";
 
@@ -19,155 +19,144 @@ export default function ImageCarousel({
   initialIndex = 0,
   title = "",
   thumbSize = 72,
-  width = 680,      // fixed width (px) default
-  height = 420,     // fixed height (px) default
+  width = 680,
+  height = 420,
   transitionMs = 420,
   onIndexChange = () => {},
 }) {
-  // state
+  const sanitizedImages = useMemo(() => Array.isArray(images) ? images : [], [images]);
+  const maxIndex = Math.max(0, sanitizedImages.length - 1);
+
   const [index, setIndex] = useState(() => {
-    const i = Math.max(0, Math.min(initialIndex || 0, (images || []).length - 1));
-    return Number.isFinite(i) ? i : 0;
+    const i = Number.isFinite(initialIndex) ? Math.max(0, Math.min(initialIndex, maxIndex)) : 0;
+    return i;
   });
-  const [loaded, setLoaded] = useState(() => (images || []).map(() => false));
-  const [errored, setErrored] = useState(() => (images || []).map(() => false));
 
-  // refs for dragging
-  const mainRef = useRef(null);
-  const thumbsRef = useRef(null);
-  const touchStartX = useRef(null);
-  const deltaX = useRef(0);
-  const isPointerDown = useRef(false);
+  const [loaded, setLoaded] = useState(() => sanitizedImages.map(() => false));
+  const [errored, setErrored] = useState(() => sanitizedImages.map(() => false));
 
-  // keep local copy if images updates
   useEffect(() => {
-    setLoaded((_) => (images || []).map(() => false));
-    setErrored((_) => (images || []).map(() => false));
-    setIndex((i) => Math.min(i, Math.max(0, (images || []).length - 1)));
-  }, [images]);
+    setLoaded(sanitizedImages.map(() => false));
+    setErrored(sanitizedImages.map(() => false));
+    setIndex((i) => Math.min(i, Math.max(0, sanitizedImages.length - 1)));
+  }, [sanitizedImages]);
 
-  // call back to parent when index changes
   useEffect(() => {
     onIndexChange(index);
-    // scroll active thumb into view
     const activeThumb = thumbsRef.current?.querySelector(".ic-thumb-btn.active");
     if (activeThumb && typeof activeThumb.scrollIntoView === "function") {
       activeThumb.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
     }
   }, [index, onIndexChange]);
 
-  // handle pointer/touch drag
-  const onPointerDown = (clientX) => {
+  const mainRef = useRef(null);
+  const thumbsRef = useRef(null);
+  const touchStartX = useRef(0);
+  const deltaX = useRef(0);
+  const isPointerDown = useRef(false);
+
+  const onPointerDown = useCallback((clientX) => {
     isPointerDown.current = true;
     touchStartX.current = clientX;
     deltaX.current = 0;
-  };
+  }, []);
 
-  const onPointerMove = (clientX) => {
+  const onPointerMove = useCallback((clientX) => {
     if (!isPointerDown.current) return;
     deltaX.current = clientX - touchStartX.current;
-    if (mainRef.current) {
-      // small translate for feedback, but fade is the main effect
-      mainRef.current.style.transform = `translateX(${deltaX.current}px)`;
-    }
-  };
+    if (mainRef.current) mainRef.current.style.transform = `translateX(${deltaX.current}px)`;
+  }, []);
 
-  const onPointerUp = () => {
+  const onPointerUp = useCallback(() => {
     if (!isPointerDown.current) return;
     isPointerDown.current = false;
-    const threshold = Math.max(48, width * 0.06); // px threshold
+    const threshold = Math.max(48, (typeof width === "number" ? width : 680) * 0.06);
     if (Math.abs(deltaX.current) > threshold) {
-      if (deltaX.current > 0) {
-        // dragged right -> previous
-        setIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1));
-      } else {
-        // dragged left -> next
-        setIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0));
-      }
+      setIndex((prev) => (deltaX.current > 0 ? (prev > 0 ? prev - 1 : maxIndex) : (prev < maxIndex ? prev + 1 : 0)));
     }
-    // reset transform
     if (mainRef.current) mainRef.current.style.transform = "";
     deltaX.current = 0;
-  };
+  }, [maxIndex, width]);
 
-  // pointer/mouse/touch handlers
-  const handleTouchStart = (e) => {
-    const clientX = (e.touches && e.touches[0] && e.touches[0].clientX) || (e.clientX) || 0;
+  const handleTouchStart = useCallback((e) => {
+    const clientX = (e.touches && e.touches[0] && e.touches[0].clientX) || 0;
     onPointerDown(clientX);
-  };
-  const handleTouchMove = (e) => {
-    const clientX = (e.touches && e.touches[0] && e.touches[0].clientX) || (e.clientX) || 0;
-    onPointerMove(clientX);
-  };
-  const handleTouchEnd = () => onPointerUp();
+  }, [onPointerDown]);
 
-  const handleMouseDown = (e) => {
+  const handleTouchMove = useCallback((e) => {
+    const clientX = (e.touches && e.touches[0] && e.touches[0].clientX) || 0;
+    onPointerMove(clientX);
+  }, [onPointerMove]);
+
+  const handleTouchEnd = useCallback(() => onPointerUp(), [onPointerUp]);
+
+  const handleMouseDown = useCallback((e) => {
     e.preventDefault();
     onPointerDown(e.clientX);
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp, { once: true });
-  };
-  const handleMouseMove = (e) => onPointerMove(e.clientX);
-  const handleMouseUp = () => {
+  }, [onPointerDown]);
+
+  const handleMouseMove = useCallback((e) => onPointerMove(e.clientX), [onPointerMove]);
+
+  const handleMouseUp = useCallback(() => {
     onPointerUp();
     window.removeEventListener("mousemove", handleMouseMove);
     window.removeEventListener("mouseup", handleMouseUp);
-  };
+  }, [onPointerUp]);
 
-  // keyboard navigation (left/right)
   useEffect(() => {
     const kb = (ev) => {
-      if (ev.key === "ArrowLeft") {
-        setIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1));
-      } else if (ev.key === "ArrowRight") {
-        setIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0));
-      }
+      if (ev.key === "ArrowLeft") setIndex((prev) => (prev > 0 ? prev - 1 : maxIndex));
+      else if (ev.key === "ArrowRight") setIndex((prev) => (prev < maxIndex ? prev + 1 : 0));
     };
     window.addEventListener("keydown", kb);
     return () => window.removeEventListener("keydown", kb);
-  }, [images.length]);
+  }, [maxIndex]);
 
-  // img handlers
-  const handleLoad = (i) => () => {
+  const handleImgLoad = useCallback((i) => {
     setLoaded((prev) => {
-      const arr = [...prev];
-      arr[i] = true;
-      return arr;
+      const copy = prev.slice();
+      copy[i] = true;
+      return copy;
     });
-  };
-  const handleError = (i) => () => {
     setErrored((prev) => {
-      const arr = [...prev];
-      arr[i] = true;
-      return arr;
+      const copy = prev.slice();
+      copy[i] = false;
+      return copy;
+    });
+  }, []);
+
+  const handleImgError = useCallback((i) => {
+    setErrored((prev) => {
+      const copy = prev.slice();
+      copy[i] = true;
+      return copy;
     });
     setLoaded((prev) => {
-      const arr = [...prev];
-      arr[i] = true; // stop loader
-      return arr;
+      const copy = prev.slice();
+      copy[i] = true;
+      return copy;
     });
-  };
+  }, []);
 
-  // click bullet/thumb
-  const gotoIndex = (i) => {
+  const gotoIndex = useCallback((i) => {
     if (i === index) return;
     setIndex(i);
-  };
+  }, [index]);
 
-  // computed
-  const visibleCount = (images || []).length;
-  const carouselStyle = {
+  const visibleCount = sanitizedImages.length;
+  const carouselStyle = useMemo(() => ({
     width: typeof width === "number" ? `${width}px` : width,
     height: typeof height === "number" ? `${height}px` : height,
     "--ic-transition-ms": `${transitionMs}ms`,
-  };
+  }), [width, height, transitionMs]);
 
   return (
     <div className="ic-root">
       <div
         className="ic-viewport"
         style={carouselStyle}
-        // main touch/mouse handlers
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -175,9 +164,8 @@ export default function ImageCarousel({
         role="presentation"
         aria-label={`${title} product images carousel`}
       >
-        {/* slides container: we use absolute slides with fade; mainRef used for drag translate feedback */}
         <div className="ic-slides" ref={mainRef}>
-          {(images || []).map((img, i) => {
+          {sanitizedImages.map((img, i) => {
             const src = isFullUrl(img) ? img : null;
             const key = src ? `url-${src}-${i}` : `id-${String(img)}-${i}`;
             const isActive = i === index;
@@ -190,24 +178,35 @@ export default function ImageCarousel({
                 aria-label={`${title} image ${i + 1} of ${visibleCount}`}
               >
                 {!loaded[i] && (
-                  <div className="ic-loader">
+                  <div className="ic-loader" aria-hidden>
                     <div className="ic-spinner" />
                   </div>
                 )}
 
-                {/* Use your Image component. If it doesn't forward onLoad/onError, replace with <img /> */}
-                <Image
-                  imageUrl={src}
-                  imageId={src ? null : img}
-                  alt={`${title} (${i + 1}/${visibleCount})`}
-                  size={1000}
-                  className="ic-image"
-                  onLoad={handleLoad(i)}
-                  onError={handleError(i)}
-                />
+                {src ? (
+                  <img
+                    className="ic-image"
+                    src={src}
+                    alt={`${title} (${i + 1}/${visibleCount})`}
+                    onLoad={() => handleImgLoad(i)}
+                    onError={() => handleImgError(i)}
+                    decoding="async"
+                    loading="lazy"
+                  />
+                ) : (
+                  <Image
+                    imageUrl={null}
+                    publicId={img}
+                    alt={`${title} (${i + 1}/${visibleCount})`}
+                    className="ic-image"
+                    containerClassName="ic-image-wrapper"
+                    widthHint={width}
+                    heightHint={height}
+                  />
+                )}
 
                 {errored[i] && (
-                  <div className="ic-error">
+                  <div className="ic-error" aria-hidden>
                     <img src={PLACEHOLDER} alt="fallback" />
                     <div className="ic-error-text">Image not available</div>
                   </div>
@@ -218,9 +217,8 @@ export default function ImageCarousel({
         </div>
       </div>
 
-      {/* bullets */}
       <div className="ic-bullets" role="tablist" aria-label="Image bullets">
-        {(images || []).map((_, i) => (
+        {sanitizedImages.map((_, i) => (
           <button
             key={`dot-${i}`}
             type="button"
@@ -232,10 +230,9 @@ export default function ImageCarousel({
         ))}
       </div>
 
-      {/* thumbnails */}
       <div className="ic-thumbs-wrap">
         <div className="ic-thumbs" ref={thumbsRef} role="tablist" aria-label="Thumbnails">
-          {(images || []).map((img, i) => {
+          {sanitizedImages.map((img, i) => {
             const src = isFullUrl(img) ? img : null;
             return (
               <button
@@ -247,14 +244,27 @@ export default function ImageCarousel({
                 aria-label={`Show image ${i + 1}`}
               >
                 <div className="ic-thumb-inner" style={{ width: thumbSize, height: thumbSize }}>
-                  <Image
-                    imageUrl={src}
-                    imageId={src ? null : img}
-                    alt={`${title} thumbnail ${i + 1}`}
-                    size={160}
-                    className="ic-thumb-image"
-                    onError={() => {}}
-                  />
+                  {src ? (
+                    <img
+                      src={src}
+                      alt={`${title} thumbnail ${i + 1}`}
+                      className="ic-thumb-image"
+                      decoding="async"
+                      loading="lazy"
+                      onLoad={() => handleImgLoad(i)}
+                      onError={() => handleImgError(i)}
+                    />
+                  ) : (
+                    <Image
+                      imageUrl={null}
+                      publicId={img}
+                      alt={`${title} thumbnail ${i + 1}`}
+                      className="ic-thumb-image"
+                      containerClassName="ic-thumb-image-wrap"
+                      widthHint={thumbSize}
+                      heightHint={thumbSize}
+                    />
+                  )}
                 </div>
               </button>
             );
@@ -266,7 +276,7 @@ export default function ImageCarousel({
 }
 
 ImageCarousel.propTypes = {
-  images: PropTypes.array.isRequired,
+  images: PropTypes.array,
   initialIndex: PropTypes.number,
   title: PropTypes.string,
   thumbSize: PropTypes.number,
