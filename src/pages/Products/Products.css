@@ -841,7 +841,7 @@ label>input[type="checkbox"] {
   background: #ffff;
 
   .btn.primary {
-    padding: 12px 17px;
+    padding: 8px 9px;
     font-size: 1rem;
     border-radius: 6px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
@@ -1115,4 +1115,94 @@ label>input[type="checkbox"] {
 }
 .refresh-overlay-wrapper:not(.hidden) {
   animation: fadeInRefresh 0.36s cubic-bezier(0.22,0.9,0.3,1);
+}
+/* --- Empty State --- */
+.no-products {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--text-muted, #666);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.6s ease-in-out;
+}
+
+.no-products-content {
+  max-width: 420px;
+}
+
+.no-products-icon {
+  color: #d0d0d0;
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.empty-icon {
+  width: 70px;
+  height: 70px;
+  color: #aaa;
+  stroke: #aaa;
+}
+
+.no-products-title {
+  font-size: 1.4rem;
+  margin: 0.25rem 0;
+  color: var(--text-primary, #222);
+  font-weight: 600;
+}
+
+.no-products-text {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--text-secondary, #555);
+  margin-bottom: 1.5rem;
+}
+
+/* Button styling */
+.reset-btn {
+  background-color: #009688;
+  color: #fff;
+  font-weight: 600;
+  border: none;
+  padding: 0.7rem 1.4rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.reset-btn:hover {
+  background-color: #00796b;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0, 150, 136, 0.2);
+}
+
+/* --- Animations --- */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+.bounce {
+  animation: bounce 1.6s infinite ease-in-out;
+}
+
+.fade-in {
+  animation: fadeIn 0.6s ease forwards;
 }

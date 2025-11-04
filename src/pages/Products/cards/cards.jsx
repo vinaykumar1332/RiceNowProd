@@ -1,12 +1,32 @@
-// src/components/Products/cards/cards.jsx
 import React, { useMemo, useState, useCallback } from "react";
 import PropTypes from "prop-types";
 import "./cards.css";
-import { cleanTags } from "../../../utils/helpers"; // Adjust path if needed
-import Image from "../Images/Image"; // Ensure this path matches your project
+import { cleanTags } from "../../../utils/helpers";
+import Image from "../Images/Image";
 import { TbListDetails } from "react-icons/tb";
 
-const MemoizedCards = React.memo(function Cards({
+const URL_REGEX = /^(https?:\/\/|data:|blob:)/i;
+
+function isFullUrl(candidate) {
+  return typeof candidate === "string" && URL_REGEX.test(candidate.trim());
+}
+
+function computeRawCandidate(product, images, image) {
+  if (Array.isArray(images) && images.length) return images[0];
+  if (image) return image;
+  if (product.image_id) return product.image_id;
+  if (product.drive_image_id) return product.drive_image_id;
+  if (product.driveId) return product.driveId;
+  return null;
+}
+
+function formatNumber(n) {
+  const num = Number(n ?? 0);
+  if (Number.isNaN(num)) return "0.00";
+  return num.toFixed(2);
+}
+
+function Cards({
   product = {},
   onAdd = () => {},
   onRemove = () => {},
@@ -29,49 +49,39 @@ const MemoizedCards = React.memo(function Cards({
     stock,
     active,
     category = "Unknown",
-    // possible brand keys: prefer product.brand, fallback to brand_name or mfg
     brand: productBrand,
     brand_name,
     mfg,
   } = product;
 
-  // derive brand
   const brand = useMemo(() => {
     const b = productBrand ?? brand_name ?? mfg ?? "";
     return String(b).trim() || "—";
   }, [productBrand, brand_name, mfg]);
 
-  const rawCandidate = useMemo(() => {
-    return (
-      (Array.isArray(images) && images.length && images[0]) ||
-      image ||
-      product.image_id ||
-      product.drive_image_id ||
-      product.driveId ||
-      null
-    );
-  }, [images, image, product]);
+  const rawCandidate = useMemo(() => computeRawCandidate(product, images, image), [product, images, image]);
 
-  const isFullUrl = useMemo(() => {
-    if (!rawCandidate || typeof rawCandidate !== "string") return false;
-    return /^(https?:\/\/|data:|blob:)/i.test(rawCandidate.trim());
-  }, [rawCandidate]);
+  const candidateIsUrl = useMemo(() => isFullUrl(rawCandidate), [rawCandidate]);
 
-  const imageList = useMemo(
-    () =>
-      Array.isArray(images) && images.length
-        ? images
-        : image
-        ? [image]
-        : rawCandidate
-        ? [rawCandidate]
-        : [],
-    [images, image, rawCandidate]
-  );
+  const imageList = useMemo(() => {
+    if (Array.isArray(images) && images.length) return images;
+    if (image) return [image];
+    if (rawCandidate) return [rawCandidate];
+    return [];
+  }, [images, image, rawCandidate]);
 
-  const tagList = useMemo(() => cleanTags(tags, tags_array), [tags, tags_array]);
-  const isActive = String(active ?? stock ?? "").toLowerCase() === "active";
-  const displayWeight = weight || (Array.isArray(weights) ? weights.join(", ") : "—");
+  const tagList = useMemo(() => cleanTags(tags, tags_array) || [], [tags, tags_array]);
+
+  const isActive = useMemo(() => {
+    const v = active ?? stock ?? "";
+    return String(v).toLowerCase() === "active" || v === true || (typeof v === "number" && v > 0);
+  }, [active, stock]);
+
+  const displayWeight = useMemo(() => {
+    if (weight) return weight;
+    if (Array.isArray(weights) && weights.length) return weights.join(", ");
+    return "—";
+  }, [weight, weights]);
 
   const percentOff = useMemo(() => {
     const p = Number(price);
@@ -80,45 +90,44 @@ const MemoizedCards = React.memo(function Cards({
     return Math.round(((p - o) / p) * 100);
   }, [price, offer_price]);
 
-  // handlers memoized to avoid re-creating on every render
-  const handleOpenOverlay = useCallback(
-    (evt) => {
-      evt?.stopPropagation();
-      setExpanded(true);
-    },
-    [setExpanded]
-  );
-
-  const handleCloseOverlay = useCallback(
-    (evt) => {
-      evt?.stopPropagation();
-      setExpanded(false);
-    },
-    [setExpanded]
-  );
-
   const handleAdd = useCallback(
-    (evt) => {
-      evt?.stopPropagation();
+    (e) => {
+      e?.stopPropagation();
       onAdd(product);
     },
     [onAdd, product]
   );
 
   const handleRemove = useCallback(
-    (evt) => {
-      evt?.stopPropagation();
+    (e) => {
+      e?.stopPropagation();
       onRemove(product);
     },
     [onRemove, product]
   );
 
   const handleOpenDetails = useCallback(
-    (evt) => {
-      evt?.stopPropagation();
+    (e) => {
+      e?.stopPropagation();
       onOpenDetails(product);
     },
     [onOpenDetails, product]
+  );
+
+  const openOverlay = useCallback(
+    (e) => {
+      e?.stopPropagation();
+      setExpanded(true);
+    },
+    []
+  );
+
+  const closeOverlay = useCallback(
+    (e) => {
+      e?.stopPropagation();
+      setExpanded(false);
+    },
+    []
   );
 
   return (
@@ -128,13 +137,13 @@ const MemoizedCards = React.memo(function Cards({
           className="media-figure"
           role="img"
           aria-label={title}
-          onClick={() => onOpenDetails(product)}
+          onClick={handleOpenDetails}
           style={{ cursor: "pointer" }}
         >
           {imageList.length ? (
             <Image
-              imageUrl={isFullUrl ? rawCandidate : null}
-              imageId={isFullUrl ? null : rawCandidate}
+              imageUrl={candidateIsUrl ? rawCandidate : null}
+              publicId={candidateIsUrl ? null : rawCandidate}
               alt={title}
               className="card-img"
             />
@@ -150,10 +159,9 @@ const MemoizedCards = React.memo(function Cards({
           ) : null}
         </div>
       </div>
-
       <div className="card-body">
         <div className="card-head">
-          <h3 className="card-title" onClick={() => onOpenDetails(product)} style={{ cursor: "pointer" }}>
+          <h3 className="card-title" onClick={handleOpenDetails} style={{ cursor: "pointer" }}>
             {title}
           </h3>
           <div className="brand-stock">
@@ -161,7 +169,6 @@ const MemoizedCards = React.memo(function Cards({
           </div>
         </div>
 
-        {/* Brand moved inside card-body (not in card-head) as requested */}
         <div className="brand-row" aria-hidden={false}>
           <strong className="brand-label">Brand:</strong>
           <span className="brand-value" title={brand}>
@@ -172,8 +179,8 @@ const MemoizedCards = React.memo(function Cards({
         <p className="desc">{description}</p>
 
         <div className="price-row">
-          {offer_price ? <span className="offer">₹{Number(offer_price || price || 0).toFixed(2)}</span> : null}
-          {price && String(price) !== String(offer_price) ? <span className="orig">₹{Number(price).toFixed(2)}</span> : null}
+          {offer_price ? <span className="offer">₹{formatNumber(offer_price ?? price)}</span> : null}
+          {price && String(price) !== String(offer_price) ? <span className="orig">₹{formatNumber(price)}</span> : null}
         </div>
 
         <div className="info-row">
@@ -225,7 +232,7 @@ const MemoizedCards = React.memo(function Cards({
             className="details-btn"
             onClick={(e) => {
               handleOpenDetails(e);
-              handleOpenOverlay(e);
+              openOverlay(e);
             }}
             aria-expanded={expanded}
             aria-controls="details-panel"
@@ -236,9 +243,9 @@ const MemoizedCards = React.memo(function Cards({
       </div>
 
       {expanded && (
-        <div className="details-overlay" role="dialog" aria-modal="true" id="details-panel" onClick={handleCloseOverlay}>
+        <div className="details-overlay" role="dialog" aria-modal="true" id="details-panel" onClick={closeOverlay}>
           <div className="details-panel" onClick={(e) => e.stopPropagation()}>
-            <button className="details-close" onClick={handleCloseOverlay} aria-label="Close details">
+            <button className="details-close" onClick={closeOverlay} aria-label="Close details">
               ✕
             </button>
             <div className="details-inner">
@@ -246,23 +253,26 @@ const MemoizedCards = React.memo(function Cards({
                 <h4>{title}</h4>
                 {percentOff && <div className="overlay-badge">{percentOff}% OFF</div>}
               </div>
+
               <div className="details-body">
                 <div className="details-image-wrap">
                   {imageList.length ? (
                     <Image
-                      imageUrl={isFullUrl ? rawCandidate : null}
-                      imageId={isFullUrl ? null : rawCandidate}
+                      imageUrl={candidateIsUrl ? rawCandidate : null}
+                      publicId={candidateIsUrl ? null : rawCandidate}
                       alt={title}
-                      size={800}
                       className="details-img"
-                      style={{ width: "100%", height: "auto" }}
+                      widthHint={800}
+                      heightHint={600}
                     />
                   ) : (
                     <div className="image-placeholder">No image</div>
                   )}
                 </div>
+
                 <div className="details-text">
                   <p className="full-desc">{description}</p>
+
                   <div className="details-meta">
                     <div>
                       <strong>Category:</strong> {category}
@@ -273,10 +283,12 @@ const MemoizedCards = React.memo(function Cards({
                     <div>
                       <strong>Weight:</strong> {displayWeight}
                     </div>
+
                     <div className="price-block">
-                      {offer_price ? <div className="offer-large">₹{Number(offer_price).toFixed(2)}</div> : null}
-                      {price && String(price) !== String(offer_price) ? <div className="orig-large">₹{Number(price).toFixed(2)}</div> : null}
+                      {offer_price ? <div className="offer-large">₹{formatNumber(offer_price)}</div> : null}
+                      {price && String(price) !== String(offer_price) ? <div className="orig-large">₹{formatNumber(price)}</div> : null}
                     </div>
+
                     <div className="tag-list">{tagList.map((t, idx) => <span key={idx} className="tag">{t}</span>)}</div>
                   </div>
                 </div>
@@ -301,7 +313,7 @@ const MemoizedCards = React.memo(function Cards({
                   )}
                 </div>
 
-                <button className="close-secondary" onClick={handleCloseOverlay} aria-label="Close details">
+                <button className="close-secondary" onClick={closeOverlay} aria-label="Close details">
                   Close
                 </button>
               </div>
@@ -311,9 +323,9 @@ const MemoizedCards = React.memo(function Cards({
       )}
     </article>
   );
-});
+}
 
-MemoizedCards.propTypes = {
+Cards.propTypes = {
   product: PropTypes.shape({
     title: PropTypes.string,
     description: PropTypes.string,
@@ -321,7 +333,7 @@ MemoizedCards.propTypes = {
     offer_price: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     images: PropTypes.arrayOf(PropTypes.string),
     image: PropTypes.string,
-    tags: PropTypes.string,
+    tags: PropTypes.any,
     tags_array: PropTypes.arrayOf(PropTypes.string),
     weight: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     weights: PropTypes.arrayOf(PropTypes.oneOfType([PropTypes.string, PropTypes.number])),
@@ -341,4 +353,4 @@ MemoizedCards.propTypes = {
   onOpenDetails: PropTypes.func,
 };
 
-export default MemoizedCards;
+export default React.memo(Cards);

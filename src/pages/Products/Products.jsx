@@ -5,28 +5,28 @@ import { useNavigate, useLocation } from "react-router-dom";
 import Cards from "./cards/cards";
 import "./Products.css";
 import { FaFilter } from "react-icons/fa6";
-import { FaShoppingCart, FaTrash } from "react-icons/fa";
+import { FaShoppingCart, FaTrash, FaRegWindowClose } from "react-icons/fa";
 import Search from "./Search/Search";
 import { VITE_PRODUCTS_API } from "../../API";
 import { TiShoppingCart } from "react-icons/ti";
 import { cleanTags } from "../../utils/helpers";
 import { IoIosRefresh } from "react-icons/io";
-import Image from "./Images/Image"; // ensure path/casing matches your file
+import Image from "./Images/Image";
 import ImageCarousel from "./Images/ImageCarousel";
-import { FaRegWindowClose } from "react-icons/fa"; 
+import { TfiReload } from "react-icons/tfi";
 
 const PRODUCTS_API = VITE_PRODUCTS_API;
+const CACHE_KEY = "rice_products_cache_v1";
+const CACHE_META_KEY = "rice_products_meta_v1";
+const DEFAULT_CACHE_TTL_MS = 10 * 60 * 1000;
 
-/* ---------- small helpers ---------- */
 function setCookie(name, value, days = 1) {
   try {
     const d = new Date();
     d.setTime(d.getTime() + days * 24 * 60 * 60 * 1000);
     const expires = "expires=" + d.toUTCString();
     document.cookie = `${name}=${encodeURIComponent(value)};${expires};path=/`;
-  } catch (e) {
-    console.warn("setCookie failed:", e);
-  }
+  } catch (e) {}
 }
 
 const isFullUrl = (str) =>
@@ -45,18 +45,112 @@ function computeStableKey(product) {
     }
     return `hash:${Math.abs(h)}`;
   } catch (e) {
-    console.warn("computeStableKey failed:", e);
     return `prod-${Math.random().toString(36).slice(2, 9)}`;
   }
 }
 
-/* ---------- Refresh Button (inlined) ---------- */
-function RefreshBtn({
-  visible = false,
-  delayMs = 300,
-  onRefresh = () => {},
-  busy = false,
-}) {
+function resolveImageCandidate(candidate) {
+  if (!candidate) return { imageUrl: null, imageId: null };
+  if (Array.isArray(candidate) && candidate.length > 0) candidate = candidate[0];
+  if (typeof candidate === "object") {
+    const possible = candidate.url || candidate.src || candidate.drive_image_id || candidate.imageId || candidate.id;
+    if (possible) return resolveImageCandidate(possible);
+    if (candidate.full || candidate.large || candidate.medium)
+      return resolveImageCandidate(candidate.full || candidate.large || candidate.medium);
+    return { imageUrl: null, imageId: null };
+  }
+  const s = String(candidate).trim();
+  if (!s) return { imageUrl: null, imageId: null };
+  if (isFullUrl(s)) return { imageUrl: s, imageId: null };
+  return { imageUrl: null, imageId: s };
+}
+
+function safeStorageAvailable(type = "localStorage") {
+  try {
+    const storage = window[type];
+    const testKey = "__rn_test__";
+    storage.setItem(testKey, "1");
+    storage.removeItem(testKey);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function readLocalJSON(key) {
+  try {
+    if (safeStorageAvailable("localStorage")) {
+      const v = localStorage.getItem(key);
+      if (v) return JSON.parse(v);
+    }
+  } catch (err) {}
+  try {
+    if (safeStorageAvailable("sessionStorage")) {
+      const v2 = sessionStorage.getItem(key);
+      if (v2) return JSON.parse(v2);
+    }
+  } catch (err) {}
+  return null;
+}
+
+function writeLocalJSON(key, value) {
+  const json = JSON.stringify(value);
+  try {
+    if (safeStorageAvailable("localStorage")) {
+      localStorage.setItem(key, json);
+      return;
+    }
+  } catch (err) {}
+  try {
+    if (safeStorageAvailable("sessionStorage")) {
+      sessionStorage.setItem(key, json);
+      return;
+    }
+  } catch (err) {}
+}
+
+function removeLocal(key) {
+  try {
+    if (safeStorageAvailable("localStorage")) localStorage.removeItem(key);
+  } catch (e) {}
+  try {
+    if (safeStorageAvailable("sessionStorage")) sessionStorage.removeItem(key);
+  } catch (e) {}
+}
+
+function simpleHash(str) {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h += (h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24);
+    h = h >>> 0;
+  }
+  return h.toString(36);
+}
+
+function readCachedProducts() {
+  const data = readLocalJSON(CACHE_KEY);
+  const meta = readLocalJSON(CACHE_META_KEY);
+  if (!data || !meta) return null;
+  return { data, meta };
+}
+
+function writeCachedProducts(data, meta = {}) {
+  writeLocalJSON(CACHE_KEY, data);
+  const finalMeta = {
+    ...(readLocalJSON(CACHE_META_KEY) || {}),
+    ...meta,
+    fetchedAt: Date.now(),
+  };
+  writeLocalJSON(CACHE_META_KEY, finalMeta);
+}
+
+function invalidateCache() {
+  removeLocal(CACHE_KEY);
+  removeLocal(CACHE_META_KEY);
+}
+
+function RefreshBtn({ visible = false, delayMs = 300, onRefresh = () => {}, busy = false }) {
   const [mounted, setMounted] = useState(false);
   const [iconOnly, setIconOnly] = useState(false);
   const mountTimer = useRef(null);
@@ -99,7 +193,9 @@ function RefreshBtn({
         aria-busy={busy}
         aria-label="Refresh products"
       >
-        <span className="refresh-icon" aria-hidden="true"><IoIosRefresh /></span>
+        <span className="refresh-icon" aria-hidden="true">
+          <IoIosRefresh />
+        </span>
         {!iconOnly && <span className="refresh-text">Refresh</span>}
         {busy && <span className="refresh-spinner" aria-hidden="true" />}
       </button>
@@ -114,135 +210,14 @@ RefreshBtn.propTypes = {
   busy: PropTypes.bool,
 };
 
-/* ---------- Image candidate resolver ---------- */
-function resolveImageCandidate(candidate) {
-  if (!candidate) return { imageUrl: null, imageId: null };
-
-  if (Array.isArray(candidate) && candidate.length > 0) candidate = candidate[0];
-
-  if (typeof candidate === "object") {
-    const possible = candidate.url || candidate.src || candidate.drive_image_id || candidate.imageId || candidate.id;
-    if (possible) return resolveImageCandidate(possible);
-    if (candidate.full || candidate.large || candidate.medium) return resolveImageCandidate(candidate.full || candidate.large || candidate.medium);
-    return { imageUrl: null, imageId: null };
-  }
-
-  const s = String(candidate).trim();
-  if (!s) return { imageUrl: null, imageId: null };
-  if (isFullUrl(s)) return { imageUrl: s, imageId: null };
-  return { imageUrl: null, imageId: s };
-}
-
-/* ---------- CACHING HELPERS ---------- */
-const CACHE_KEY = "rice_products_cache_v1";
-const CACHE_META_KEY = "rice_products_meta_v1";
-const DEFAULT_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
-
-function safeStorageAvailable(type = "localStorage") {
-  try {
-    const storage = window[type];
-    const testKey = "__rn_test__";
-    storage.setItem(testKey, "1");
-    storage.removeItem(testKey);
-    return true;
-  } catch (e) {
-    return false;
-  }
-}
-
-function readLocalJSON(key) {
-  try {
-    if (safeStorageAvailable("localStorage")) {
-      const v = localStorage.getItem(key);
-      if (v) return JSON.parse(v);
-    }
-  } catch (err) {
-    console.warn("readLocalJSON(localStorage) failed", key, err);
-  }
-  try {
-    if (safeStorageAvailable("sessionStorage")) {
-      const v2 = sessionStorage.getItem(key);
-      if (v2) return JSON.parse(v2);
-    }
-  } catch (err) {
-    console.warn("readLocalJSON(sessionStorage) failed", key, err);
-  }
-  return null;
-}
-
-function writeLocalJSON(key, value) {
-  const json = JSON.stringify(value);
-  try {
-    if (safeStorageAvailable("localStorage")) {
-      localStorage.setItem(key, json);
-      return;
-    }
-  } catch (err) {
-    console.warn("writeLocalJSON(localStorage) failed", key, err);
-  }
-  try {
-    if (safeStorageAvailable("sessionStorage")) {
-      sessionStorage.setItem(key, json);
-      return;
-    }
-  } catch (err) {
-    console.warn("writeLocalJSON(sessionStorage) failed", key, err);
-  }
-}
-
-function removeLocal(key) {
-  try {
-    if (safeStorageAvailable("localStorage")) localStorage.removeItem(key);
-  } catch (e) {}
-  try {
-    if (safeStorageAvailable("sessionStorage")) sessionStorage.removeItem(key);
-  } catch (e) {}
-}
-
-function simpleHash(str) {
-  let h = 2166136261 >>> 0;
-  for (let i = 0; i < str.length; i++) {
-    h ^= str.charCodeAt(i);
-    h += (h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24);
-    h = h >>> 0;
-  }
-  return h.toString(36);
-}
-function readCachedProducts() {
-  const data = readLocalJSON(CACHE_KEY);
-  const meta = readLocalJSON(CACHE_META_KEY);
-  if (!data || !meta) return null;
-  return { data, meta };
-}
-function writeCachedProducts(data, meta = {}) {
-  writeLocalJSON(CACHE_KEY, data);
-  const finalMeta = {
-    ...(readLocalJSON(CACHE_META_KEY) || {}),
-    ...meta,
-    fetchedAt: Date.now(),
-  };
-  writeLocalJSON(CACHE_META_KEY, finalMeta);
-}
-function invalidateCache() {
-  removeLocal(CACHE_KEY);
-  removeLocal(CACHE_META_KEY);
-}
-
-/* ---------- CartDrawer ---------- */
 function CartDrawer({ open, onClose, items, onInc, onDec, onRemove, onCheckout }) {
   const total = useMemo(
-    () =>
-      items.reduce((s, i) => s + (Number(i.offer_price ?? i.price ?? 0) * (i.qty ?? 0)), 0),
+    () => items.reduce((s, i) => s + (Number(i.offer_price ?? i.price ?? 0) * (i.qty ?? 0)), 0),
     [items]
   );
 
   return (
-    <aside
-      className={`cart-drawer ${open ? "open" : ""}`}
-      aria-hidden={!open}
-      role="dialog"
-      aria-label="Shopping cart"
-    >
+    <aside className={`cart-drawer ${open ? "open" : ""}`} aria-hidden={!open} role="dialog" aria-label="Shopping cart">
       <div className="cart-header">
         <h3 className="cart-title">Your Cart</h3>
         <button type="button" className="drawer-close" onClick={onClose} aria-label="Close cart">
@@ -257,7 +232,14 @@ function CartDrawer({ open, onClose, items, onInc, onDec, onRemove, onCheckout }
           items.map((it) => {
             const cartKey = it._key ?? computeStableKey(it);
             const candidate =
-              it._imageCandidate ?? (it.images && it.images[0]) ?? it.image ?? it.image_id ?? it.drive_image_id ?? it.driveId ?? it.id ?? null;
+              it._imageCandidate ??
+              (it.images && it.images[0]) ??
+              it.image ??
+              it.image_id ??
+              it.drive_image_id ??
+              it.driveId ??
+              it.id ??
+              null;
             const { imageUrl, imageId } = resolveImageCandidate(candidate);
 
             return (
@@ -265,13 +247,7 @@ function CartDrawer({ open, onClose, items, onInc, onDec, onRemove, onCheckout }
                 <div className="cart-item-left">
                   <div className="cart-item-wrapper">
                     <div className="cart-thumb" aria-hidden="true">
-                      <Image
-                        imageUrl={imageUrl}
-                        imageId={imageId}
-                        alt={it.title || "Product image"}
-                        size={160}
-                        className="cart-thumb-image"
-                      />
+                      <Image imageUrl={imageUrl} imageId={imageId} alt={it.title || "Product image"} size={160} className="cart-thumb-image" />
                     </div>
                     <div className="cart-item-meta">
                       <div className="cart-title">{it.title}</div>
@@ -286,7 +262,9 @@ function CartDrawer({ open, onClose, items, onInc, onDec, onRemove, onCheckout }
                   <button type="button" className="btn" onClick={() => onDec(it)} aria-label="decrease">
                     −
                   </button>
-                  <span aria-live="polite" aria-atomic="true">{it.qty}</span>
+                  <span aria-live="polite" aria-atomic="true">
+                    {it.qty}
+                  </span>
                   <button type="button" className="btn" onClick={() => onInc(it)} aria-label="increase">
                     +
                   </button>
@@ -334,7 +312,6 @@ CartDrawer.propTypes = {
   onCheckout: PropTypes.func,
 };
 
-/* ---------- FilterPanel ---------- */
 function FilterPanel({ open, onClose, filters, current, setCurrent, onReset }) {
   const priceRanges = useMemo(
     () => [
@@ -349,10 +326,13 @@ function FilterPanel({ open, onClose, filters, current, setCurrent, onReset }) {
   const brands = useMemo(() => Array.from(filters.brands || []), [filters.brands]);
   const kgOptions = useMemo(() => Array.from(filters.kgs || []), [filters.kgs]);
 
-  const handleCloseClick = useCallback((e) => {
-    e.target.blur(); // Blur the close button immediately to prevent focus retention
-    onClose();
-  }, [onClose]);
+  const handleCloseClick = useCallback(
+    (e) => {
+      e.target.blur();
+      onClose();
+    },
+    [onClose]
+  );
 
   return (
     <div className={`filter-panel ${open ? "open" : ""}`} aria-hidden={!open} role="dialog" aria-modal={open} aria-label="Filters">
@@ -368,24 +348,12 @@ function FilterPanel({ open, onClose, filters, current, setCurrent, onReset }) {
           <h4>Brand</h4>
           <div className="brand-radios">
             <label>
-              <input
-                type="radio"
-                name="brand"
-                value=""
-                checked={!current.brand}
-                onChange={() => setCurrent((c) => ({ ...c, brand: null }))}
-              />
+              <input type="radio" name="brand" value="" checked={!current.brand} onChange={() => setCurrent((c) => ({ ...c, brand: null }))} />
               All
             </label>
             {brands.map((b) => (
               <label key={String(b)}>
-                <input
-                  type="radio"
-                  name="brand"
-                  value={b}
-                  checked={String(current.brand) === String(b)}
-                  onChange={() => setCurrent((c) => ({ ...c, brand: b }))}
-                />
+                <input type="radio" name="brand" value={b} checked={String(current.brand) === String(b)} onChange={() => setCurrent((c) => ({ ...c, brand: b }))} />
                 {b}
               </label>
             ))}
@@ -453,13 +421,7 @@ function FilterPanel({ open, onClose, filters, current, setCurrent, onReset }) {
             </label>
             {kgOptions.map((k) => (
               <label key={String(k)}>
-                <input
-                  type="radio"
-                  name="kgs"
-                  value={k}
-                  checked={String(current.kgs) === String(k)}
-                  onChange={() => setCurrent((c) => ({ ...c, kgs: k }))}
-                />
+                <input type="radio" name="kgs" value={k} checked={String(current.kgs) === String(k)} onChange={() => setCurrent((c) => ({ ...c, kgs: k }))} />
                 {k}
               </label>
             ))}
@@ -493,9 +455,9 @@ FilterPanel.propTypes = {
   onReset: PropTypes.func.isRequired,
 };
 
-/* ---------- ProductDetailsOverlay (UPDATED to use ImageCarousel) ---------- */
 function ProductDetailsOverlay({ product, onClose, onAdd, onRemove, qty }) {
   if (!product) return null;
+
   const { title, description, images, image, weight, tags, tags_array, brand } = product;
   const imageListBase = Array.isArray(images) && images.length ? images.slice() : image ? [image] : [];
   if (imageListBase.length === 0) {
@@ -525,17 +487,23 @@ function ProductDetailsOverlay({ product, onClose, onAdd, onRemove, qty }) {
     return (
       <div className="details-overlay open" onClick={onClose}>
         <div className="details-content" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Product details">
-          <button type="button" className="drawer-close" onClick={onClose} aria-label="Close details">✕</button>
+          <button type="button" className="drawer-close" onClick={onClose} aria-label="Close details">
+            ✕
+          </button>
           <div className="details-body no-image">
             <div className="details-text">
               <h2>{title}</h2>
-              {brand && <p><strong>Brand:</strong> {brand}</p>}
+              {brand && (
+                <p>
+                  <strong>Brand:</strong> {brand}
+                </p>
+              )}
               <p>{description}</p>
-              <p><strong>Price:</strong> ₹{product.offer_price ?? product.price}</p>
+              <p>
+                <strong>Price:</strong> ₹{product.offer_price ?? product.price}
+              </p>
               <p>{weight}</p>
-              <div className="tags">
-                {(tagList || []).map((t) => <span key={String(t)} className="tag">{t}</span>)}
-              </div>
+              <div className="tags">{(tagList || []).map((t) => <span key={String(t)} className="tag">{t}</span>)}</div>
             </div>
           </div>
           <div className="qty-controls">
@@ -557,26 +525,28 @@ function ProductDetailsOverlay({ product, onClose, onAdd, onRemove, qty }) {
   return (
     <div className="details-overlay open" onClick={onClose}>
       <div className="details-content details-carousel" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Product details">
-        <button type="button" className="drawer-close" onClick={onClose} aria-label="Close details"><FaRegWindowClose /></button>
+        <button type="button" className="drawer-close" onClick={onClose} aria-label="Close details">
+          <FaRegWindowClose />
+        </button>
 
-        {/* NEW: use ImageCarousel component */}
-        <ImageCarousel
-          images={imageListBase}
-          initialIndex={index}
-          title={title}
-          onIndexChange={(i) => setIndex(i)}
-        />
+        <ImageCarousel images={imageListBase} initialIndex={index} title={title} onIndexChange={(i) => setIndex(i)} />
 
         <div className="details-meta-block">
           <h2>{title}</h2>
-          {brand && <p><strong>Brand:</strong> {brand}</p>}
+          {brand && (
+            <p>
+              <strong>Brand:</strong> {brand}
+            </p>
+          )}
           <p className="details-desc">{description}</p>
-          <p><strong>Price:</strong> ₹{product.offer_price ?? product.price}</p>
-          <p><strong>Weight:</strong> {weight}</p>
+          <p>
+            <strong>Price:</strong> ₹{product.offer_price ?? product.price}
+          </p>
+          <p>
+            <strong>Weight:</strong> {weight}
+          </p>
 
-          <div className="tags">
-            {(tagList || []).map((t) => <span key={String(t)} className="tag">{t}</span>)}
-          </div>
+          <div className="tags">{(tagList || []).map((t) => <span key={String(t)} className="tag">{t}</span>)}</div>
 
           <div className="qty-controls">
             {qty > 0 ? (
@@ -603,7 +573,6 @@ ProductDetailsOverlay.propTypes = {
   qty: PropTypes.number.isRequired,
 };
 
-/* ---------- Main Products component ---------- */
 export default function Products() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -617,7 +586,6 @@ export default function Products() {
       const s = JSON.parse(sessionStorage.getItem("cart") || "[]");
       return Array.isArray(s) ? s : [];
     } catch (e) {
-      console.warn("Failed to parse persisted cart:", e);
       return [];
     }
   });
@@ -641,30 +609,22 @@ export default function Products() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(null);
 
-  // refresh button visibility / busy + dismissal control
   const [refreshVisible, setRefreshVisible] = useState(false);
   const [refreshBusy, setRefreshBusy] = useState(false);
   const [userDismissed, setUserDismissed] = useState(false);
 
-  // Mount ref to prevent state updates on unmounted component
   const isMountedRef = useRef(true);
-
-  // Ref for currentFilter to avoid stale closures
   const currentFilterRef = useRef(currentFilter);
-
-  // Sync currentFilter ref
   useEffect(() => {
     currentFilterRef.current = currentFilter;
   }, [currentFilter]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       isMountedRef.current = false;
     };
   }, []);
 
-  // Ref for filter button to manage focus
   const filterBtnRef = useRef(null);
 
   const priceRanges = useMemo(
@@ -677,17 +637,15 @@ export default function Products() {
     []
   );
 
-  // helper to extract products from various possible shapes
-  const extractProducts = (data) => {
+  const extractProducts = useCallback((data) => {
     if (Array.isArray(data)) return data;
     if (Array.isArray(data?.products)) return data.products;
     if (Array.isArray(data?.rows)) return data.rows;
     if (Array.isArray(data?.data)) return data.data;
-    console.warn("Unexpected data shape from products API", data);
     return [];
-  };
+  }, []);
 
-  const dedupeByKey = (rows) => {
+  const dedupeByKey = useCallback((rows) => {
     const seen = new Set();
     const out = [];
     for (let i = 0; i < (rows || []).length; i++) {
@@ -696,15 +654,14 @@ export default function Products() {
       if (!seen.has(key)) {
         seen.add(key);
         const normalized = { ...r, _key: computeStableKey(r) };
-        normalized._imageCandidate =
-          (r.images && r.images[0]) ?? r.image ?? r.image_id ?? r.drive_image_id ?? r.driveId ?? r.id ?? null;
+        normalized._imageCandidate = (r.images && r.images[0]) ?? r.image ?? r.image_id ?? r.drive_image_id ?? r.driveId ?? r.id ?? null;
         out.push(normalized);
       }
     }
     return out;
-  };
+  }, []);
 
-  const processFilters = (rows) => {
+  const processFilters = useCallback((rows) => {
     const brands = new Set();
     const kgs = new Set();
     const tagsSet = new Set();
@@ -769,33 +726,142 @@ export default function Products() {
       minPrice: Number.isFinite(min) ? Math.floor(min) : 0,
       maxPrice: Number.isFinite(max) ? Math.ceil(max) : 0,
     };
-  };
+  }, []);
 
-  /* ---------- CACHED FETCH ---------- */
-  const fetchProducts = useCallback(async (opts = {}) => {
-    const useTTLMs = opts.useTTLMs ?? DEFAULT_CACHE_TTL_MS;
-    const force = opts.force ?? false;
+  const fetchProducts = useCallback(
+    async (opts = {}) => {
+      const useTTLMs = opts.useTTLMs ?? DEFAULT_CACHE_TTL_MS;
+      const force = opts.force ?? false;
 
-    if (!isMountedRef.current) return;
+      if (!isMountedRef.current) return;
 
-    setLoading(true);
-    setError(null);
-    if (force) setRefreshBusy(true);
+      setLoading(true);
+      setError(null);
+      if (force) setRefreshBusy(true);
 
-    if (!PRODUCTS_API) {
-      setError("Products API not configured.");
-      setLoading(false);
-      setRefreshBusy(false);
-      return;
-    }
+      if (!PRODUCTS_API) {
+        setError("Products API not configured.");
+        setLoading(false);
+        setRefreshBusy(false);
+        return;
+      }
 
-    try {
-      const cached = readCachedProducts();
-      const now = Date.now();
+      try {
+        const cached = readCachedProducts();
+        const now = Date.now();
 
-      if (cached && !force) {
-        const rows = extractProducts(cached.data);
+        if (cached && !force) {
+          const rows = extractProducts(cached.data);
+          const uniqueRows = dedupeByKey(rows);
+          if (isMountedRef.current) {
+            setRaw(uniqueRows);
+            setProducts(uniqueRows);
+          }
+
+          const processed = processFilters(uniqueRows);
+          if (isMountedRef.current) {
+            setFilters({
+              brands: processed.brands,
+              kgs: processed.kgs,
+              tags: processed.tags,
+              minPrice: processed.minPrice,
+              maxPrice: processed.maxPrice,
+            });
+            setCurrentFilter((c) => ({ ...c, maxPrice: processed.maxPrice }));
+          }
+
+          const age = now - (cached.meta?.fetchedAt || 0);
+          if (age > useTTLMs / 2 && !userDismissed) {
+            setRefreshVisible(true);
+          } else {
+            setRefreshVisible(false);
+          }
+
+          if (age <= useTTLMs) {
+            if (isMountedRef.current) {
+              setLoading(false);
+              setRefreshBusy(false);
+            }
+            return;
+          }
+        }
+
+        const meta = (cached && cached.meta) || {};
+        const headers = new Headers();
+        headers.set("Accept", "application/json");
+        if (meta.etag) headers.set("If-None-Match", meta.etag);
+        if (meta.lastModified) headers.set("If-Modified-Since", meta.lastModified);
+
+        const res = await fetch(PRODUCTS_API, {
+          method: "GET",
+          mode: "cors",
+          credentials: "omit",
+          headers,
+        });
+
+        if (res.status === 304) {
+          writeCachedProducts(cached.data, {
+            fetchedAt: Date.now(),
+          });
+          if (isMountedRef.current) {
+            setLoading(false);
+            setRefreshBusy(false);
+            setRefreshVisible(false);
+          }
+          return;
+        }
+
+        if (!res.ok) {
+          const text = await res.text().catch(() => "");
+          const msg = `Fetch error ${res.status}${text ? `: ${text}` : ""}`;
+          if (cached && cached.data) {
+            if (isMountedRef.current) {
+              setLoading(false);
+              setRefreshBusy(false);
+              setRefreshVisible(!userDismissed);
+            }
+            return;
+          }
+          throw new Error(msg);
+        }
+
+        const data = await res.json();
+
+        let responseText = null;
+        try {
+          responseText = JSON.stringify(data);
+        } catch (err) {
+          responseText = null;
+        }
+        const responseHash = responseText ? simpleHash(responseText) : null;
+
+        const newEtag = res.headers.get("ETag") || null;
+        const lastModified = res.headers.get("Last-Modified") || null;
+
+        const prevHash = cached?.meta?.hash || null;
+        const prevEtag = cached?.meta?.etag || null;
+
+        const isSameByEtag = newEtag && prevEtag && newEtag === prevEtag;
+        const isSameByHash = prevHash && responseHash && prevHash === responseHash;
+
+        if (isSameByEtag || isSameByHash) {
+          writeCachedProducts(cached ? cached.data : data, {
+            etag: newEtag,
+            lastModified,
+            hash: responseHash || prevHash || null,
+            fetchedAt: Date.now(),
+          });
+          if (isMountedRef.current) {
+            setLoading(false);
+            setRefreshBusy(false);
+            setRefreshVisible(false);
+          }
+          return;
+        }
+
+        const rows = extractProducts(data);
         const uniqueRows = dedupeByKey(rows);
+
         if (isMountedRef.current) {
           setRaw(uniqueRows);
           setProducts(uniqueRows);
@@ -810,159 +876,49 @@ export default function Products() {
             minPrice: processed.minPrice,
             maxPrice: processed.maxPrice,
           });
+
           setCurrentFilter((c) => ({ ...c, maxPrice: processed.maxPrice }));
         }
 
-        const age = now - (cached.meta?.fetchedAt || 0);
-        if (age > useTTLMs / 2 && !userDismissed) {
-          setRefreshVisible(true);
-        } else {
-          setRefreshVisible(false);
-        }
-
-        if (age <= useTTLMs) {
-          if (isMountedRef.current) {
-            setLoading(false);
-            setRefreshBusy(false);
-          }
-          return;
-        }
-      }
-
-      const meta = (cached && cached.meta) || {};
-      const headers = new Headers();
-      headers.set("Accept", "application/json");
-      if (meta.etag) headers.set("If-None-Match", meta.etag);
-      if (meta.lastModified) headers.set("If-Modified-Since", meta.lastModified);
-
-      const res = await fetch(PRODUCTS_API, {
-        method: "GET",
-        mode: "cors",
-        credentials: "omit",
-        headers,
-      });
-
-      if (res.status === 304) {
-        writeCachedProducts(cached.data, {
-          fetchedAt: Date.now(),
-        });
-        if (isMountedRef.current) {
-          setLoading(false);
-          setRefreshBusy(false);
-          setRefreshVisible(false);
-        }
-        return;
-      }
-
-      if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        const msg = `Fetch error ${res.status}${text ? `: ${text}` : ""}`;
-        if (cached && cached.data) {
-          console.warn(msg, " — serving cached data");
-          if (isMountedRef.current) {
-            setLoading(false);
-            setRefreshBusy(false);
-            setRefreshVisible(!userDismissed);
-          }
-          return;
-        }
-        throw new Error(msg);
-      }
-
-      const data = await res.json();
-
-      let responseText = null;
-      try {
-        responseText = JSON.stringify(data);
-      } catch (err) {
-        responseText = null;
-      }
-      const responseHash = responseText ? simpleHash(responseText) : null;
-
-      const newEtag = res.headers.get("ETag") || null;
-      const lastModified = res.headers.get("Last-Modified") || null;
-
-      const prevHash = cached?.meta?.hash || null;
-      const prevEtag = cached?.meta?.etag || null;
-
-      const isSameByEtag = newEtag && prevEtag && newEtag === prevEtag;
-      const isSameByHash = prevHash && responseHash && prevHash === responseHash;
-
-      if (isSameByEtag || isSameByHash) {
-        writeCachedProducts(cached ? cached.data : data, {
+        writeCachedProducts(data, {
           etag: newEtag,
           lastModified,
-          hash: responseHash || prevHash || null,
+          hash: responseHash,
           fetchedAt: Date.now(),
         });
+
+        if (isMountedRef.current) {
+          setRefreshVisible(false);
+          setUserDismissed(false);
+        }
+      } catch (err) {
+        if (isMountedRef.current) {
+          setError(err.message || "Failed to fetch products");
+        }
+        const cached = readCachedProducts();
+        if (cached && cached.data) {
+          const rows = extractProducts(cached.data);
+          const uniqueRows = dedupeByKey(rows);
+          if (isMountedRef.current) {
+            setRaw(uniqueRows);
+            setProducts(uniqueRows);
+            setRefreshVisible(!userDismissed);
+          }
+        }
+      } finally {
         if (isMountedRef.current) {
           setLoading(false);
           setRefreshBusy(false);
-          setRefreshVisible(false);
-        }
-        return;
-      }
-
-      const rows = extractProducts(data);
-      const uniqueRows = dedupeByKey(rows);
-
-      if (isMountedRef.current) {
-        setRaw(uniqueRows);
-        setProducts(uniqueRows);
-      }
-
-      const processed = processFilters(uniqueRows);
-      if (isMountedRef.current) {
-        setFilters({
-          brands: processed.brands,
-          kgs: processed.kgs,
-          tags: processed.tags,
-          minPrice: processed.minPrice,
-          maxPrice: processed.maxPrice,
-        });
-
-        setCurrentFilter((c) => ({ ...c, maxPrice: processed.maxPrice }));
-      }
-
-      writeCachedProducts(data, {
-        etag: newEtag,
-        lastModified,
-        hash: responseHash,
-        fetchedAt: Date.now(),
-      });
-
-      if (isMountedRef.current) {
-        setRefreshVisible(false);
-        setUserDismissed(false);
-      }
-    } catch (err) {
-      console.error("Failed to fetch products", err);
-      if (isMountedRef.current) {
-        setError(err.message || "Failed to fetch products");
-      }
-      const cached = readCachedProducts();
-      if (cached && cached.data) {
-        const rows = extractProducts(cached.data);
-        const uniqueRows = dedupeByKey(rows);
-        if (isMountedRef.current) {
-          setRaw(uniqueRows);
-          setProducts(uniqueRows);
-          setRefreshVisible(!userDismissed);
         }
       }
-    } finally {
-      if (isMountedRef.current) {
-        setLoading(false);
-        setRefreshBusy(false);
-      }
-    }
-  }, [setProducts, setRaw, setFilters, setCurrentFilter]);
+    },
+    [extractProducts, dedupeByKey, processFilters, userDismissed]
+  );
 
   useEffect(() => {
     fetchProducts({ useTTLMs: DEFAULT_CACHE_TTL_MS, force: false });
   }, [fetchProducts]);
 
-  /* ---------- URL → filter sync (brand & category) ---------- */
   useEffect(() => {
     const params = new URLSearchParams(location.search || "");
     const brandParam = params.get("brand");
@@ -1006,10 +962,8 @@ export default function Products() {
         return null;
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.search]);
 
-  /* ---------- Filtering / search (applies brand from currentFilter and selectedCategory) ---------- */
   useEffect(() => {
     const q = (searchQuery || "").trim().toLowerCase();
 
@@ -1027,7 +981,7 @@ export default function Products() {
 
       if (pPrice > (currentFilter.maxPrice ?? Number.POSITIVE_INFINITY)) return false;
 
-      const pBrand = (p.brand ?? p.manufacturer ?? p.mfg ?? p.vendor ?? "");
+      const pBrand = p.brand ?? p.manufacturer ?? p.mfg ?? p.vendor ?? "";
       if (currentFilter.brand) {
         if (String(pBrand).trim().toLowerCase() !== String(currentFilter.brand).trim().toLowerCase()) return false;
       }
@@ -1105,8 +1059,7 @@ export default function Products() {
     setProducts(filtered);
   }, [currentFilter, raw, priceRanges, searchQuery, selectedCategory]);
 
-  /* ---------- Cart helpers ---------- */
-  const addToCart = (product) => {
+  const addToCart = useCallback((product) => {
     if (!product) return;
     const activeVal = product.active ?? product.stock ?? "";
     const isActive =
@@ -1125,9 +1078,9 @@ export default function Products() {
       }
       return [{ ...product, qty: 1 }, ...prev];
     });
-  };
+  }, []);
 
-  const removeOne = (product) => {
+  const removeOne = useCallback((product) => {
     setCart((prev) => {
       const foundIndex = prev.findIndex((i) => (i.id ?? i.title) === (product.id ?? product.title));
       if (foundIndex === -1) return prev;
@@ -1139,18 +1092,16 @@ export default function Products() {
       newCart[foundIndex] = { ...newCart[foundIndex], qty: (newCart[foundIndex].qty ?? 0) - 1 };
       return newCart;
     });
-  };
+  }, []);
 
-  const removeAll = (product) => {
+  const removeAll = useCallback((product) => {
     setCart((prev) => prev.filter((i) => (i.id ?? i.title) !== (product.id ?? product.title)));
-  };
+  }, []);
 
   useEffect(() => {
     try {
       sessionStorage.setItem("cart", JSON.stringify(cart));
-    } catch (e) {
-      console.warn("Failed to persist cart:", e);
-    }
+    } catch (e) {}
   }, [cart]);
 
   const cartQtyMap = useMemo(() => {
@@ -1161,7 +1112,7 @@ export default function Products() {
 
   const totalCartItems = useMemo(() => cart.reduce((s, i) => s + (i.qty ?? 0), 0), [cart]);
 
-  const resetFilters = () => {
+  const resetFilters = useCallback(() => {
     setSearchQuery("");
     setSelectedCategory(null);
     setCurrentFilter({
@@ -1184,33 +1135,27 @@ export default function Products() {
     if (changed) {
       navigate({ pathname: location.pathname, search: params.toString() }, { replace: true });
     }
-  };
+  }, [filters.maxPrice, location.search, navigate, location.pathname]);
 
-  const handleCheckout = () => {
+  const handleCheckout = useCallback(() => {
     try {
       const cartCopy = JSON.parse(JSON.stringify(cart));
       sessionStorage.setItem("cart", JSON.stringify(cartCopy));
       setCookie("rice_cart", JSON.stringify(cartCopy), 1);
       navigate("/checkout", { state: { cart: cartCopy } });
     } catch (err) {
-      console.error("Failed to prepare checkout", err);
       setError("Failed to prepare checkout. Please try again.");
     }
-  };
+  }, [cart, navigate]);
 
-  /* ---------- Scroll & Overlay logic for refresh button ---------- */
-  const SCROLL_THRESHOLD = 0.30;
+  const SCROLL_THRESHOLD = 0.3;
   const scrollListenerRef = useRef(null);
 
   useEffect(() => {
     const onScroll = () => {
       try {
         const scrollTop = window.scrollY || window.pageYOffset || document.documentElement.scrollTop || 0;
-        const docHeight = Math.max(
-          document.documentElement.scrollHeight,
-          document.body.scrollHeight,
-          document.documentElement.clientHeight
-        );
+        const docHeight = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight, document.documentElement.clientHeight);
         const winH = window.innerHeight || document.documentElement.clientHeight || 0;
         const scrollable = Math.max(docHeight - winH, 1);
         const percent = scrollTop / scrollable;
@@ -1240,15 +1185,12 @@ export default function Products() {
     }
   }, [selectedProduct]);
 
-  /* ---------- Refresh handlers ---------- */
-  const handleManualRefresh = async () => {
+  const handleManualRefresh = useCallback(async () => {
     if (!isMountedRef.current) return;
     invalidateCache();
     try {
       sessionStorage.removeItem("cart");
-    } catch (e) {
-      console.warn("Failed to clear cart from sessionStorage:", e);
-    }
+    } catch (e) {}
     setCart([]);
     setRefreshBusy(true);
     setRefreshVisible(false);
@@ -1258,14 +1200,12 @@ export default function Products() {
     } finally {
       setRefreshBusy(false);
     }
-  };
+  }, [fetchProducts]);
 
-  // Filter toggle with focus management
   const toggleFilter = useCallback(() => {
     setFilterOpen((prev) => {
       const newOpen = !prev;
       if (!newOpen) {
-        // If closing, focus back to trigger button after state update
         setTimeout(() => {
           filterBtnRef.current?.focus();
         }, 0);
@@ -1276,13 +1216,24 @@ export default function Products() {
 
   const handleFilterClose = useCallback(() => {
     setFilterOpen(false);
-    // Focus back to trigger
     setTimeout(() => {
       filterBtnRef.current?.focus();
     }, 0);
   }, []);
 
-  /* ---------- UI: rendering ---------- */
+  const cardClickHandler = useCallback((p) => (e) => {
+    const interactive = e.target.closest && e.target.closest("button, a, input, select, textarea, [role='button']");
+    if (interactive) return;
+    setSelectedProduct(p);
+  }, []);
+
+  const cardKeyDownHandler = useCallback((p) => (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      setSelectedProduct(p);
+    }
+  }, []);
+
   return (
     <div className="page products-page-wrapper">
       <div className="page-head-wrapper">
@@ -1296,7 +1247,9 @@ export default function Products() {
               aria-expanded={filterOpen}
               title="Toggle filters"
             >
-              <i className="filter-icon"><FaFilter /></i>
+              <i className="filter-icon">
+                <FaFilter />
+              </i>
             </button>
           </div>
 
@@ -1317,12 +1270,10 @@ export default function Products() {
             />
           </div>
 
-          <div className="Date-card">
-            {(() => {
-              const meta = readLocalJSON(CACHE_META_KEY);
-              return meta?.fetchedAt ? `Updated: ${new Date(meta.fetchedAt).toLocaleString()}` : "";
-            })()}
-          </div>
+          <div className="Date-card">{(() => {
+            const meta = readLocalJSON(CACHE_META_KEY);
+            return meta?.fetchedAt ? `Updated: ${new Date(meta.fetchedAt).toLocaleString()}` : "";
+          })()}</div>
         </div>
 
         <div className="page-head-1">
@@ -1345,14 +1296,32 @@ export default function Products() {
             <div className="error-box" role="alert" aria-live="assertive">
               <div className="error-title">Error: {error}</div>
               <div className="error-actions">
-                <button type="button" className="btn primary" onClick={() => fetchProducts({ force: true })}>Try again</button>
+                <button type="button" className="btn primary" onClick={() => fetchProducts({ force: true })}>
+                  Try again
+                </button>
               </div>
             </div>
           )}
 
           {!loading && !error && products.length === 0 && (
-            <div className="no-products">
-              No products found. <button type="button" className="btn" onClick={resetFilters}>Reset filters</button>
+            <div className="no-products fade-in">
+              <div className="no-products-content">
+                <div className="no-products-icon bounce">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h18l-1.5 9H4.5L3 3zm0 0l2 14.5A2 2 0 007 19h10a2 2 0 002-1.5L21 3M10 21h4" />
+                  </svg>
+                </div>
+                <h3 className="no-products-title">No products match your search</h3>
+                <p className="no-products-text">We couldn’t find items for the filters you selected. Try broadening your search or reset filters to see everything.</p>
+                <div className="no-products-actions">
+                  <button type="button" className="reset-btn" onClick={resetFilters}>
+                    <TfiReload /> Try Reset Filters
+                  </button>
+                  <button type="button" className="btn" onClick={() => fetchProducts({ force: true })}>
+                    Reload
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 
@@ -1362,14 +1331,23 @@ export default function Products() {
                 {products.map((p) => {
                   const stableKey = p._key ?? computeStableKey(p);
                   return (
-                    <Cards
+                    <div
                       key={stableKey}
-                      product={p}
-                      onAdd={addToCart}
-                      onRemove={removeOne}
-                      qty={cartQtyMap.get(p.id ?? p.title) ?? 0}
-                      onOpenDetails={() => setSelectedProduct(p)}
-                    />
+                      role="button"
+                      tabIndex={0}
+                      className="card-click-wrapper"
+                      onClick={cardClickHandler(p)}
+                      onKeyDown={cardKeyDownHandler(p)}
+                      aria-label={`Open details for ${p.title || "product"}`}
+                    >
+                      <Cards
+                        product={p}
+                        onAdd={addToCart}
+                        onRemove={removeOne}
+                        qty={cartQtyMap.get(p.id ?? p.title) ?? 0}
+                        onOpenDetails={() => setSelectedProduct(p)}
+                      />
+                    </div>
                   );
                 })}
               </div>
@@ -1386,7 +1364,9 @@ export default function Products() {
 
       {totalCartItems > 0 && (
         <button type="button" className="cart-badge-btn" onClick={() => setDrawerOpen(true)} aria-label="Open cart">
-          <i className="cart-icon"><FaShoppingCart /></i>
+          <i className="cart-icon">
+            <FaShoppingCart />
+          </i>
           {totalCartItems > 0 && <span className="badge" aria-hidden="false">{totalCartItems}</span>}
         </button>
       )}
@@ -1399,12 +1379,7 @@ export default function Products() {
         qty={cartQtyMap.get(selectedProduct?.id ?? selectedProduct?.title) ?? 0}
       />
 
-      <RefreshBtn
-        visible={refreshVisible}
-        delayMs={220}
-        busy={refreshBusy || loading}
-        onRefresh={handleManualRefresh}
-      />
+      <RefreshBtn visible={refreshVisible} delayMs={220} busy={refreshBusy || loading} onRefresh={handleManualRefresh} />
     </div>
   );
 }
