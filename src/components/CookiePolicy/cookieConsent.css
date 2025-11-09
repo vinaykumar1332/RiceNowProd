@@ -1,0 +1,347 @@
+:root {
+  --brand-primary: #158664; /* Main theme color (Green) */
+  --color-text-dark: #171717;
+  --color-text-body: #525252;
+  --color-secondary-bg: #f3f4f6;
+  --color-border-light: #e5e7eb;
+  --brand-primary-light: #d8f5eb; /* Lighter shade for hover/focus outlines */
+  --brand-primary-dark: #117354; /* Darker shade for active states */
+}
+
+/* Basic reset for component */
+.cookie-banner,
+.cookie-modal-backdrop,
+.cookie-modal {
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Icons/Placeholders */
+/* The size of the icons is best controlled directly in the JSX using the 'size' prop (e.g., <FiSettings size={14} />) */
+.small-icon { font-size: 12px; }
+
+/* Slide-up banner */
+.cookie-banner {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  z-index: 9999;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 12px 30px rgba(12, 24, 48, 0.15);
+  padding: 14px 18px;
+  transform-origin: bottom center;
+  transition: transform 320ms cubic-bezier(.2,.9,.3,1), opacity 240ms ease;
+  opacity: 1;
+}
+
+@media (max-width: 640px) {
+  .cookie-banner { left: 8px; right: 8px; bottom: 10px; padding: 10px; }
+}
+
+.cookie-banner-inner {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cookie-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.cookie-text p {
+  margin: 4px 0 0 0;
+  color: var(--color-text-body);
+  font-size: 13px; 
+  line-height: 1.4;
+}
+.cookie-text strong { 
+  font-size: 15px; 
+  color: var(--color-text-dark); 
+  display:block; 
+}
+.cookie-link { 
+  display:inline-block; 
+  margin-top:6px; 
+  font-size: 13px;
+  color: var(--brand-primary); 
+  text-decoration: underline; 
+}
+
+.cookie-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-left: 10px;
+  flex-shrink: 0;
+}
+
+/* Buttons */
+.btn {
+  border: none;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 180ms ease;
+  box-shadow: 0 1px 4px rgba(12,24,48,0.05);
+}
+/* UPDATED FOCUS COLOR to match brand primary */
+.btn:focus { outline: 3px solid var(--brand-primary-light); outline-offset: 2px; }
+
+/* variants */
+.btn-primary {
+  background: var(--brand-primary);
+  color: white;
+}
+.btn-primary:hover {
+    background: var(--brand-primary-dark);
+}
+.primary-lg { 
+  padding: 10px 16px; 
+  border-radius: 10px; 
+  font-size: 14px; 
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--brand-primary);
+  /* UPDATED BORDER COLOR to match brand primary */
+  border: 1px solid var(--brand-primary);
+}
+.btn-outline:hover {
+    background: var(--brand-primary-light);
+}
+
+.btn-secondary {
+  background: var(--color-secondary-bg);
+  color: var(--color-text-dark);
+}
+.btn-secondary:hover {
+    background: #e5e7eb;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--color-text-body);
+}
+
+.btn-disabled {
+    background: var(--color-secondary-bg);
+    color: var(--color-text-body);
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.btn.animated:hover { 
+  transform: translateY(-2px); 
+  box-shadow: 0 6px 16px rgba(12,24,48,0.08); 
+}
+.btn.animated:active { 
+  transform: translateY(0) scale(0.98); 
+  box-shadow: 0 1px 4px rgba(12,24,48,0.05);
+}
+
+/* Modal backdrop & blocker */
+.cookie-modal-backdrop, .cookie-blocker {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(6, 12, 24, 0.75);
+  padding: 20px;
+}
+
+/* Modal box */
+.cookie-modal, .cookie-blocker-inner {
+  width: 680px; 
+  max-width: calc(100% - 40px);
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(12,24,48,0.3);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: modalPop 260ms cubic-bezier(.2,.9,.3,1);
+}
+
+.cookie-blocker-inner {
+    padding: 30px;
+    align-items: center;
+    text-align: center;
+    gap: 15px;
+}
+.cookie-blocker-inner h2 { color: #cc0000; margin-top: 0; font-size: 20px;}
+.cookie-blocker-inner p { font-size: 14px; color: var(--color-text-body);}
+.blocker-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+    justify-content: center;
+}
+
+@keyframes modalPop {
+  from { transform: translateY(10px) scale(0.98); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.cookie-modal-header {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--color-border-light);
+}
+.cookie-modal-header h2 { 
+  margin:0; 
+  font-size: 18px; 
+  color: var(--color-text-dark); 
+}
+
+.modal-close {
+  border: none;
+  background: transparent;
+  font-size: 20px; 
+  cursor: pointer;
+  color: var(--color-text-body);
+}
+
+.cookie-modal-body {
+  padding: 16px 20px;
+  max-height: 60vh;
+  overflow: auto;
+  font-size: 14px; 
+  color: var(--color-text-body);
+}
+
+.cookie-category {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding: 14px 0;
+  border-bottom: 1px dashed var(--color-border-light);
+}
+.category-left { max-width: 75%; }
+.category-title { 
+  font-weight: 700; 
+  color: var(--color-text-dark); 
+  font-size: 15px; 
+}
+.category-desc { 
+  font-size: 13px; 
+  color: #6b7280; 
+  margin-top:4px; 
+}
+
+/* Toggle switch */
+.toggle { display:inline-flex; align-items:center; cursor:pointer; }
+.toggle input { display:none; }
+.toggle-slider {
+  width: 40px; height: 22px; 
+  background: var(--color-border-light); 
+  border-radius: 999px; position: relative; transition: background .18s ease;
+  box-shadow: inset 0 1px 0 rgba(0,0,0,0.03);
+}
+.toggle-slider::after {
+  content: ""; position: absolute; left: 2px; top: 2px; width: 18px; height: 18px; border-radius: 999px;
+  background: #ffffff; transition: transform .18s cubic-bezier(.2,.9,.3,1);
+  box-shadow: 0 3px 6px rgba(2,6,23,0.1);
+}
+.toggle.on .toggle-slider { background: var(--brand-primary); }
+.toggle.on .toggle-slider::after { transform: translateX(18px); }
+.toggle.disabled { opacity: 0.6; cursor: not-allowed; }
+
+.cookie-legal { 
+  margin-top: 16px; 
+  color: #6b7280; 
+  font-size: 12px; 
+}
+
+/* --- COOKIE MODAL FOOTER ALIGNMENT --- */
+.cookie-modal-footer {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding: 12px 20px;
+  border-top: 1px solid var(--color-border-light);
+}
+/* Ensure the action buttons on the right are aligned */
+.cookie-modal-footer .footer-right { 
+  display:flex; 
+  gap:10px; 
+  align-items:center; 
+}
+
+/* small floating manage button */
+.cookie-manage-floating {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 9999;
+  background: var(--color-text-dark);
+  color: #fff;
+  border-radius: 999px;
+  padding: 6px 12px; 
+  box-shadow: 0 6px 16px rgba(2,6,23,0.3);
+  border: none;
+  font-weight: 600;
+  font-size: 12px; 
+}
+.cookie-manage-floating svg { 
+    margin-right: 4px; 
+}
+
+/* Banner slide animations */
+.slide-up { animation: slideUpIn 360ms cubic-bezier(.2,.9,.3,1); }
+@keyframes slideUpIn {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Modal slide in */
+.slide-in { animation: slideInFromTop 260ms cubic-bezier(.2,.9,.3,1); }
+@keyframes slideInFromTop {
+  from { transform: translateY(-10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* --- RESPONSIVENESS --- */
+@media (max-width: 520px) {
+  .cookie-modal, .cookie-blocker-inner { width: 100%; max-width: 100%; border-radius: 8px; margin: 0 6px; }
+  .cookie-banner-inner { flex-direction: column; align-items: stretch; gap: 8px; }
+  .cookie-actions { justify-content: space-between; gap: 4px; }
+  .cookie-actions .btn { flex-grow: 1; text-align: center; justify-content: center; padding: 8px 10px; }
+
+  /* New: Modal Footer responsive stacking */
+  .cookie-modal-footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 10px 16px;
+  }
+  .cookie-modal-footer .footer-left {
+    /* Push "Forget consent" button to full width and center it */
+    order: 2;
+    text-align: center;
+  }
+  .cookie-modal-footer .footer-right { 
+    /* The main action buttons stack */
+    order: 1;
+    flex-direction: column;
+    gap: 8px;
+    align-items: stretch;
+  }
+  /* Make the action buttons full width within the footer-right block */
+  .cookie-modal-footer .footer-right .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

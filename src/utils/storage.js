@@ -1,4 +1,3 @@
-// src/utils/storage.js
 export function saveProductsToSession(key = 'rn_products', data) {
   try {
     const json = JSON.stringify(data);

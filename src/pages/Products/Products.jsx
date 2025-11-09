@@ -5,7 +5,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import Cards from "./cards/cards";
 import "./Products.css";
 import { FaFilter } from "react-icons/fa6";
-import { FaShoppingCart, FaTrash, FaRegWindowClose } from "react-icons/fa";
+import { FaShoppingCart, FaTrash } from "react-icons/fa";
 import Search from "./Search/Search";
 import { VITE_PRODUCTS_API } from "../../API";
 import { TiShoppingCart } from "react-icons/ti";
@@ -15,19 +15,167 @@ import Image from "./Images/Image";
 import ImageCarousel from "./Images/ImageCarousel";
 import { TfiReload } from "react-icons/tfi";
 
-const PRODUCTS_API = VITE_PRODUCTS_API;
-const CACHE_KEY = "rice_products_cache_v1";
-const CACHE_META_KEY = "rice_products_meta_v1";
-const DEFAULT_CACHE_TTL_MS = 10 * 60 * 1000;
+import { saveProductsToSession, loadProductsFromSession, setCookie, getCookie } from "../../utils/storage";
 
-function setCookie(name, value, days = 1) {
+// Use rn_products as canonical storage key (per your storage helper)
+const PRODUCTS_API = VITE_PRODUCTS_API;
+const CACHE_KEY = "rn_products"; // main data stored via your storage helper (base64-encoded JSON)
+const CACHE_META_KEY = "rn_products_meta_v1"; // meta stored as plain JSON in sessionStorage/localStorage (best-effort)
+
+/* ---------------------------- Small utilities ---------------------------- */
+
+function simpleHash(str) {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h += (h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24);
+    h = h >>> 0;
+  }
+  return h.toString(36);
+}
+
+function storageAvailable(type = "sessionStorage") {
   try {
-    const d = new Date();
-    d.setTime(d.getTime() + days * 24 * 60 * 60 * 1000);
-    const expires = "expires=" + d.toUTCString();
-    document.cookie = `${name}=${encodeURIComponent(value)};${expires};path=/`;
+    const s = window[type];
+    if (!s) return false;
+    const testKey = "__rn_test__";
+    s.setItem(testKey, "1");
+    s.removeItem(testKey);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+/* Read meta (meta stored as JSON string in sessionStorage or localStorage) */
+function readMeta() {
+  try {
+    if (storageAvailable("sessionStorage")) {
+      const v = sessionStorage.getItem(CACHE_META_KEY);
+      if (v) return JSON.parse(v);
+    }
+  } catch (e) {}
+  try {
+    if (storageAvailable("localStorage")) {
+      const v2 = localStorage.getItem(CACHE_META_KEY);
+      if (v2) return JSON.parse(v2);
+    }
+  } catch (e) {}
+  return null;
+}
+
+/* Write meta to sessionStorage (or localStorage fallback) */
+function writeMeta(meta) {
+  try {
+    if (storageAvailable("sessionStorage")) {
+      sessionStorage.setItem(CACHE_META_KEY, JSON.stringify(meta));
+      return true;
+    }
+  } catch (e) {}
+  try {
+    if (storageAvailable("localStorage")) {
+      localStorage.setItem(CACHE_META_KEY, JSON.stringify(meta));
+      return true;
+    }
+  } catch (e) {}
+  return false;
+}
+
+/* Remove meta key */
+function removeMeta() {
+  try {
+    if (storageAvailable("sessionStorage")) sessionStorage.removeItem(CACHE_META_KEY);
+  } catch (e) {}
+  try {
+    if (storageAvailable("localStorage")) localStorage.removeItem(CACHE_META_KEY);
   } catch (e) {}
 }
+
+/* Read cached products using your storage helper (loadProductsFromSession) and integrity-check via meta.hash */
+function readCachedProducts() {
+  try {
+    const data = typeof loadProductsFromSession === "function" ? loadProductsFromSession(CACHE_KEY) : null;
+    const meta = readMeta() || {};
+    if (!data) return null;
+    // integrity check if meta.hash exists
+    try {
+      if (meta && meta.hash) {
+        const h = simpleHash(JSON.stringify(data));
+        if (h !== meta.hash) {
+          // integrity mismatch — ignore cache
+          // console.warn("rn_products integrity mismatch - ignoring cached data");
+          return null;
+        }
+      }
+    } catch (e) {
+      // if hash check throws, still return cached data (fail-open)
+    }
+    return { data, meta };
+  } catch (err) {
+    return null;
+  }
+}
+
+/* Write cached products using your helper and store meta in session/local */
+function writeCachedProducts(data, meta = {}) {
+  try {
+    if (!data) return false;
+    const responseText = JSON.stringify(data);
+    const hash = simpleHash(responseText);
+    const prevMeta = readMeta() || {};
+    const finalMeta = {
+      ...prevMeta,
+      ...meta,
+      hash,
+      fetchedAt: Date.now(),
+    };
+
+    // data save via your helper (saveProductsToSession)
+    try {
+      if (typeof saveProductsToSession === "function") {
+        // helper signature is (key = 'rn_products', data)
+        try {
+          saveProductsToSession(CACHE_KEY, data);
+        } catch (e) {
+          // some older implementation might expect (data) only — fallback
+          try {
+            saveProductsToSession(data);
+          } catch (e2) {
+            // fallback to raw sessionStorage JSON
+            if (storageAvailable("sessionStorage")) sessionStorage.setItem(CACHE_KEY, JSON.stringify(data));
+            else if (storageAvailable("localStorage")) localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+          }
+        }
+      } else {
+        // fallback: raw sessionStorage
+        if (storageAvailable("sessionStorage")) sessionStorage.setItem(CACHE_KEY, JSON.stringify(data));
+        else if (storageAvailable("localStorage")) localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+      }
+    } catch (e) {
+      // fallback attempt done above
+    }
+
+    // write meta
+    writeMeta(finalMeta);
+    return true;
+  } catch (err) {
+    // console.warn("writeCachedProducts error", err);
+    return false;
+  }
+}
+
+/* Remove cached keys */
+function invalidateCache() {
+  try {
+    if (storageAvailable("sessionStorage")) sessionStorage.removeItem(CACHE_KEY);
+  } catch (e) {}
+  try {
+    if (storageAvailable("localStorage")) localStorage.removeItem(CACHE_KEY);
+  } catch (e) {}
+  removeMeta();
+}
+
+/* ---------------------------- Image helpers ---------------------------- */
 
 const isFullUrl = (str) =>
   typeof str === "string" && /^(https?:\/\/|data:|blob:)/i.test(String(str).trim());
@@ -65,90 +213,7 @@ function resolveImageCandidate(candidate) {
   return { imageUrl: null, imageId: s };
 }
 
-function safeStorageAvailable(type = "localStorage") {
-  try {
-    const storage = window[type];
-    const testKey = "__rn_test__";
-    storage.setItem(testKey, "1");
-    storage.removeItem(testKey);
-    return true;
-  } catch (e) {
-    return false;
-  }
-}
-
-function readLocalJSON(key) {
-  try {
-    if (safeStorageAvailable("localStorage")) {
-      const v = localStorage.getItem(key);
-      if (v) return JSON.parse(v);
-    }
-  } catch (err) {}
-  try {
-    if (safeStorageAvailable("sessionStorage")) {
-      const v2 = sessionStorage.getItem(key);
-      if (v2) return JSON.parse(v2);
-    }
-  } catch (err) {}
-  return null;
-}
-
-function writeLocalJSON(key, value) {
-  const json = JSON.stringify(value);
-  try {
-    if (safeStorageAvailable("localStorage")) {
-      localStorage.setItem(key, json);
-      return;
-    }
-  } catch (err) {}
-  try {
-    if (safeStorageAvailable("sessionStorage")) {
-      sessionStorage.setItem(key, json);
-      return;
-    }
-  } catch (err) {}
-}
-
-function removeLocal(key) {
-  try {
-    if (safeStorageAvailable("localStorage")) localStorage.removeItem(key);
-  } catch (e) {}
-  try {
-    if (safeStorageAvailable("sessionStorage")) sessionStorage.removeItem(key);
-  } catch (e) {}
-}
-
-function simpleHash(str) {
-  let h = 2166136261 >>> 0;
-  for (let i = 0; i < str.length; i++) {
-    h ^= str.charCodeAt(i);
-    h += (h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24);
-    h = h >>> 0;
-  }
-  return h.toString(36);
-}
-
-function readCachedProducts() {
-  const data = readLocalJSON(CACHE_KEY);
-  const meta = readLocalJSON(CACHE_META_KEY);
-  if (!data || !meta) return null;
-  return { data, meta };
-}
-
-function writeCachedProducts(data, meta = {}) {
-  writeLocalJSON(CACHE_KEY, data);
-  const finalMeta = {
-    ...(readLocalJSON(CACHE_META_KEY) || {}),
-    ...meta,
-    fetchedAt: Date.now(),
-  };
-  writeLocalJSON(CACHE_META_KEY, finalMeta);
-}
-
-function invalidateCache() {
-  removeLocal(CACHE_KEY);
-  removeLocal(CACHE_META_KEY);
-}
+/* --------------------------- UI subcomponents --------------------------- */
 
 function RefreshBtn({ visible = false, delayMs = 300, onRefresh = () => {}, busy = false }) {
   const [mounted, setMounted] = useState(false);
@@ -202,7 +267,6 @@ function RefreshBtn({ visible = false, delayMs = 300, onRefresh = () => {}, busy
     </div>
   );
 }
-
 RefreshBtn.propTypes = {
   visible: PropTypes.bool,
   delayMs: PropTypes.number,
@@ -231,17 +295,8 @@ function CartDrawer({ open, onClose, items, onInc, onDec, onRemove, onCheckout }
         ) : (
           items.map((it) => {
             const cartKey = it._key ?? computeStableKey(it);
-            const candidate =
-              it._imageCandidate ??
-              (it.images && it.images[0]) ??
-              it.image ??
-              it.image_id ??
-              it.drive_image_id ??
-              it.driveId ??
-              it.id ??
-              null;
+            const candidate = it._imageCandidate ?? (it.images && it.images[0]) ?? it.image ?? it.image_id ?? it.drive_image_id ?? it.driveId ?? it.id ?? null;
             const { imageUrl, imageId } = resolveImageCandidate(candidate);
-
             return (
               <div className="cart-item" key={cartKey}>
                 <div className="cart-item-left">
@@ -301,7 +356,6 @@ function CartDrawer({ open, onClose, items, onInc, onDec, onRemove, onCheckout }
     </aside>
   );
 }
-
 CartDrawer.propTypes = {
   open: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
@@ -311,6 +365,8 @@ CartDrawer.propTypes = {
   onRemove: PropTypes.func.isRequired,
   onCheckout: PropTypes.func,
 };
+
+/* FilterPanel & ProductDetailsOverlay (unchanged behavior) */
 
 function FilterPanel({ open, onClose, filters, current, setCurrent, onReset }) {
   const priceRanges = useMemo(
@@ -441,15 +497,10 @@ function FilterPanel({ open, onClose, filters, current, setCurrent, onReset }) {
     </div>
   );
 }
-
 FilterPanel.propTypes = {
   open: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
-  filters: PropTypes.shape({
-    brands: PropTypes.instanceOf(Set),
-    kgs: PropTypes.instanceOf(Set),
-    tags: PropTypes.arrayOf(PropTypes.string),
-  }).isRequired,
+  filters: PropTypes.object.isRequired,
   current: PropTypes.object.isRequired,
   setCurrent: PropTypes.func.isRequired,
   onReset: PropTypes.func.isRequired,
@@ -526,7 +577,7 @@ function ProductDetailsOverlay({ product, onClose, onAdd, onRemove, qty }) {
     <div className="details-overlay open" onClick={onClose}>
       <div className="details-content details-carousel" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Product details">
         <button type="button" className="drawer-close" onClick={onClose} aria-label="Close details">
-          <FaRegWindowClose />
+          ✕
         </button>
 
         <ImageCarousel images={imageListBase} initialIndex={index} title={title} onIndexChange={(i) => setIndex(i)} />
@@ -564,7 +615,6 @@ function ProductDetailsOverlay({ product, onClose, onAdd, onRemove, qty }) {
     </div>
   );
 }
-
 ProductDetailsOverlay.propTypes = {
   product: PropTypes.object,
   onClose: PropTypes.func.isRequired,
@@ -572,6 +622,8 @@ ProductDetailsOverlay.propTypes = {
   onRemove: PropTypes.func.isRequired,
   qty: PropTypes.number.isRequired,
 };
+
+/* ----------------------------- Main Products component ----------------------------- */
 
 export default function Products() {
   const navigate = useNavigate();
@@ -581,6 +633,7 @@ export default function Products() {
   const [raw, setRaw] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
   const [cart, setCart] = useState(() => {
     try {
       const s = JSON.parse(sessionStorage.getItem("cart") || "[]");
@@ -589,8 +642,10 @@ export default function Products() {
       return [];
     }
   });
+
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
+
   const [filters, setFilters] = useState({
     brands: new Set(),
     kgs: new Set(),
@@ -598,6 +653,7 @@ export default function Products() {
     minPrice: 0,
     maxPrice: 1000,
   });
+
   const [currentFilter, setCurrentFilter] = useState({
     brand: null,
     kgs: null,
@@ -605,6 +661,7 @@ export default function Products() {
     priceRanges: [],
     tags: [],
   });
+
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -614,12 +671,8 @@ export default function Products() {
   const [userDismissed, setUserDismissed] = useState(false);
 
   const isMountedRef = useRef(true);
-  const currentFilterRef = useRef(currentFilter);
   useEffect(() => {
-    currentFilterRef.current = currentFilter;
-  }, [currentFilter]);
-
-  useEffect(() => {
+    isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
     };
@@ -728,9 +781,11 @@ export default function Products() {
     };
   }, []);
 
+  /* ---------------- fetchProducts with safe cache behavior ---------------- */
+
   const fetchProducts = useCallback(
     async (opts = {}) => {
-      const useTTLMs = opts.useTTLMs ?? DEFAULT_CACHE_TTL_MS;
+      const useTTLMs = opts.useTTLMs ?? 10 * 60 * 1000;
       const force = opts.force ?? false;
 
       if (!isMountedRef.current) return;
@@ -792,11 +847,13 @@ export default function Products() {
         if (meta.etag) headers.set("If-None-Match", meta.etag);
         if (meta.lastModified) headers.set("If-Modified-Since", meta.lastModified);
 
+        const controller = new AbortController();
         const res = await fetch(PRODUCTS_API, {
           method: "GET",
           mode: "cors",
           credentials: "omit",
           headers,
+          signal: controller.signal,
         });
 
         if (res.status === 304) {
@@ -826,7 +883,6 @@ export default function Products() {
         }
 
         const data = await res.json();
-
         let responseText = null;
         try {
           responseText = JSON.stringify(data);
@@ -892,9 +948,7 @@ export default function Products() {
           setUserDismissed(false);
         }
       } catch (err) {
-        if (isMountedRef.current) {
-          setError(err.message || "Failed to fetch products");
-        }
+        if (isMountedRef.current) setError(err.message || "Failed to fetch products");
         const cached = readCachedProducts();
         if (cached && cached.data) {
           const rows = extractProducts(cached.data);
@@ -916,8 +970,11 @@ export default function Products() {
   );
 
   useEffect(() => {
-    fetchProducts({ useTTLMs: DEFAULT_CACHE_TTL_MS, force: false });
-  }, [fetchProducts]);
+    fetchProducts({ useTTLMs: 10 * 60 * 1000, force: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /* --------------- URL params -> filters --------------- */
 
   useEffect(() => {
     const params = new URLSearchParams(location.search || "");
@@ -955,7 +1012,7 @@ export default function Products() {
     } else {
       setSelectedCategory((prev) => {
         if (!prev) return prev;
-        const tags = currentFilterRef.current.tags || [];
+        const tags = currentFilter.tags || [];
         if (tags.some((t) => String(t).trim().toLowerCase() === String(prev).trim().toLowerCase())) {
           return prev;
         }
@@ -963,6 +1020,8 @@ export default function Products() {
       });
     }
   }, [location.search]);
+
+  /* ------------------- Client-side filtering ------------------- */
 
   useEffect(() => {
     const q = (searchQuery || "").trim().toLowerCase();
@@ -1059,6 +1118,8 @@ export default function Products() {
     setProducts(filtered);
   }, [currentFilter, raw, priceRanges, searchQuery, selectedCategory]);
 
+  /* ------------------- Cart operations ------------------- */
+
   const addToCart = useCallback((product) => {
     if (!product) return;
     const activeVal = product.active ?? product.stock ?? "";
@@ -1074,9 +1135,16 @@ export default function Products() {
       if (foundIndex > -1) {
         const newCart = [...prev];
         newCart[foundIndex] = { ...newCart[foundIndex], qty: (newCart[foundIndex].qty ?? 0) + 1 };
+        try {
+          sessionStorage.setItem("cart", JSON.stringify(newCart));
+        } catch (e) {}
         return newCart;
       }
-      return [{ ...product, qty: 1 }, ...prev];
+      const newCart = [{ ...product, qty: 1 }, ...prev];
+      try {
+        sessionStorage.setItem("cart", JSON.stringify(newCart));
+      } catch (e) {}
+      return newCart;
     });
   }, []);
 
@@ -1087,15 +1155,27 @@ export default function Products() {
       const newCart = [...prev];
       if ((newCart[foundIndex].qty ?? 0) <= 1) {
         newCart.splice(foundIndex, 1);
+        try {
+          sessionStorage.setItem("cart", JSON.stringify(newCart));
+        } catch (e) {}
         return newCart;
       }
       newCart[foundIndex] = { ...newCart[foundIndex], qty: (newCart[foundIndex].qty ?? 0) - 1 };
+      try {
+        sessionStorage.setItem("cart", JSON.stringify(newCart));
+      } catch (e) {}
       return newCart;
     });
   }, []);
 
   const removeAll = useCallback((product) => {
-    setCart((prev) => prev.filter((i) => (i.id ?? i.title) !== (product.id ?? product.title)));
+    setCart((prev) => {
+      const newCart = prev.filter((i) => (i.id ?? i.title) !== (product.id ?? product.title));
+      try {
+        sessionStorage.setItem("cart", JSON.stringify(newCart));
+      } catch (e) {}
+      return newCart;
+    });
   }, []);
 
   useEffect(() => {
@@ -1141,12 +1221,15 @@ export default function Products() {
     try {
       const cartCopy = JSON.parse(JSON.stringify(cart));
       sessionStorage.setItem("cart", JSON.stringify(cartCopy));
-      setCookie("rice_cart", JSON.stringify(cartCopy), 1);
+      // optional cookie for server-side checkout
+      document.cookie = `rice_cart=${encodeURIComponent(JSON.stringify(cartCopy))};path=/;max-age=${60 * 60 * 24}`;
       navigate("/checkout", { state: { cart: cartCopy } });
     } catch (err) {
       setError("Failed to prepare checkout. Please try again.");
     }
   }, [cart, navigate]);
+
+  /* --------------- Scroll-based refresh visibility --------------- */
 
   const SCROLL_THRESHOLD = 0.3;
   const scrollListenerRef = useRef(null);
@@ -1196,7 +1279,7 @@ export default function Products() {
     setRefreshVisible(false);
     setUserDismissed(true);
     try {
-      await fetchProducts({ force: true, useTTLMs: DEFAULT_CACHE_TTL_MS });
+      await fetchProducts({ force: true, useTTLMs: 10 * 60 * 1000 });
     } finally {
       setRefreshBusy(false);
     }
@@ -1233,6 +1316,8 @@ export default function Products() {
       setSelectedProduct(p);
     }
   }, []);
+
+  /* -------------------------- Render -------------------------- */
 
   return (
     <div className="page products-page-wrapper">
@@ -1271,7 +1356,7 @@ export default function Products() {
           </div>
 
           <div className="Date-card">{(() => {
-            const meta = readLocalJSON(CACHE_META_KEY);
+            const meta = readMeta();
             return meta?.fetchedAt ? `Updated: ${new Date(meta.fetchedAt).toLocaleString()}` : "";
           })()}</div>
         </div>
@@ -1383,3 +1468,5 @@ export default function Products() {
     </div>
   );
 }
+
+/* PropTypes omitted for main exported component (kept earlier signatures in subcomponents) */
