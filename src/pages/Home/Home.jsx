@@ -13,10 +13,8 @@ export default function Home() {
       <section className="hero-section">
         <HeroBanner />
       </section>
-
       <BrandCategoryGrid columns={4} maxBrands={12} />
       <PopularCategoryGrid columns={4} maxBrands={12} />
-
     </>
   );
 }

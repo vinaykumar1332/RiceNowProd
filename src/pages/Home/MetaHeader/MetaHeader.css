@@ -2,7 +2,6 @@
   width: 100%;
   background: linear-gradient(90deg, var(--accent-color) 0%, #0b7280 100%);
   color: #fff;
-  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto;
   font-size: 0.85rem;
   font-weight: 500;
   display: flex;
@@ -12,19 +11,36 @@
   min-height: 22px;
   max-height: 28px;
   overflow: hidden;
+  /* Start hidden state */
   opacity: 0;
   transform: translateY(-100%);
   transition: transform 0.5s ease, opacity 0.6s ease;
   z-index: 1000;
-  position: relative;
-  top:10px;
+  position: fixed; /* Use fixed position for a banner */
+  top: 0; /* Ensure it sticks to the very top */
+  left: 0;
 }
 
-/* when visible (controlled in JSX) */
-.meta-header.meta-hiding {
-  opacity: 0;
-  transform: translateY(-100%);
-  transition: transform 0.5s ease, opacity 0.6s ease;
+/* Base visible state (uses animation on first mount) */
+.meta-header.is-visible {
+  opacity: 1;
+  transform: translateY(0%);
+}
+
+/* When component is mounted and ready to show (Initial slide-in animation) */
+.meta-header {
+  animation: meta-slide-in 0.8s ease forwards;
+}
+
+@keyframes meta-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0%);
+  }
 }
 
 .meta-header .meta-content {
@@ -70,32 +86,14 @@
   pointer-events: none;
 }
 
-/* Show animation after mount */
-.meta-header {
-  animation: meta-slide-in 0.8s ease forwards;
+/* Added spin animation for busy state */
+.meta-refresh-btn.busy .ic {
+    animation: spin 1s linear infinite;
 }
 
-@keyframes meta-slide-in {
-  from {
-    opacity: 0;
-    transform: translateY(-100%);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0%);
-  }
-}
-
-/* hide after some time automatically */
-@keyframes meta-slide-out {
-  from {
-    opacity: 1;
-    transform: translateY(0%);
-  }
-  to {
-    opacity: 0;
-    transform: translateY(-100%);
-  }
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }
 
 @media (max-width: 600px) {
